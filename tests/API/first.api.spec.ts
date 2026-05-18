@@ -42,6 +42,7 @@ test.describe('Customer Screening API', () => {
       retryConfig:{
 
       },
+      testStep:true
       
     })
 
