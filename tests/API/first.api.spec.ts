@@ -1,41 +1,27 @@
 import { test, expect } from '../../fixtures/api-fixture'
 import {generateBooking} from '../../data/booking-generator'
-
-type Geo = {
-  lat: string
-  lng: string
-}
-
-type Address = {
-  street: string
-  suite: string
-  city: string
-  zipcode: string
-  geo: Geo
-}
-
-type Company = {
-  name: string
-  catchPhrase: string
-  bs: string
-}
-
-type User = {
-  id: number
-  name: string
-  username: string
-  email: string
-  address: Address
-  phone: string
-  website: string
-  company: Company
-}
+import { createBooking,getBooking } from '../../apiHelper/booking-api'
+import { bookingSchema, CreateBookingResponse } from '../../schema/booking.schema'
 
 
 
 test.describe('Customer Screening API', () => {
-  test('should return health check response', async ({ apiClient  }) => {
-    const response = await apiClient<User> ({
+  
+  
+  test('Ping HealthCheck check to confirm whether the API is up and running. ',async({apiClient})=>{
+    const resp = await apiClient({
+      method:'GET',
+      path:'/ping',
+      uiMode:true,
+      testStep:true
+     
+    })
+        expect(resp.status,`Response should be ${resp.status}`).toBe(201)
+
+
+  })
+  test('GET all bookings', async ({ apiClient  }) => {
+    const response = await apiClient ({
       method: 'GET',
       path: '/booking',
       uiMode:true,
@@ -50,9 +36,7 @@ test.describe('Customer Screening API', () => {
     })
 
     expect(response.status,`Response should be ${response.status}`).toBe(200)
-    // expect(response.body).toMatchObject({
-    //   status: 'UP'
-    // })
+  
   })
   // test('Test auth', async({apiClient,apiStore }) =>{
   //   const resp = await apiClient({
@@ -73,7 +57,8 @@ test.describe('Customer Screening API', () => {
 
   // })
 
-  test('Create booking', async({apiClient,apiStore,authToken }) =>{
+
+  test('Create a booking', async({apiClient,authToken }) =>{
     const body = generateBooking({depositpaid: false})
     const resp = await apiClient({
       method: 'POST',
@@ -84,12 +69,29 @@ test.describe('Customer Screening API', () => {
       },
       uiMode:true,
       body:body,
-
       
-    })
-     
+    }).validateSchema(bookingSchema)
+   
+
+    expect(resp.status,`Response should be ${resp.status}`).toBe(200)
+    expect(resp.validationResult.success).toBeTruthy()
+    expect(resp.body?.bookingid).toBeDefined()
+    
 
   })
+
+   test('Create and Get booking (independent)', async({apiClient,authToken }) =>{
+
+    const created = await createBooking(apiClient)
+    const fetched = await getBooking(apiClient,created.bookingid)
+
+    expect(fetched).toMatchObject(created.booking)
+    
+
+  })
+
+
+
 })
 
 

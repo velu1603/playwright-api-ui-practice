@@ -24,11 +24,23 @@ type ApiClient = <T = unknown>(
   options: ApiClientOptions
 ) => EnhancedApiPromise<T>   
 
+
 type Fixtures = {
   apiClient: ApiClient
-  apiStore: ApiStore
   authToken: string
 }
+
+
+type TestFixtures  = {
+  apiClient: ApiClient
+ // apiStore: ApiStore
+  authToken: string
+}
+
+type WorkerFixtures = {
+  apiStore: ApiStore
+}
+
 export const test = base.extend<Fixtures>({
 // authtoken fixture
 authToken: async({apiClient}, use) =>{
@@ -45,39 +57,29 @@ authToken: async({apiClient}, use) =>{
   await use(token)
 },
  // ✅ In-memory store (per test)
-apiStore: async ({}, use) => {
-  const store = new Map<string, unknown>()
 
-  await use({
-    get: <T = unknown>(key: string): T | undefined => {
-      return store.get(key) as T | undefined
-    },
 
-    set: (key: string, value: unknown): void => {
-      store.set(key, value)
-    },
-  })
-},
- apiClient: async ({ request, page, apiStore }, use) => {
+// API client
+ apiClient: async ({ request, page }, use) => {
 
   const client: ApiClient = <T = unknown>(options: ApiClientOptions) => {
-    const { key, ...rest } = options
+    //const { key, ...rest } = options
 
-    const promise = apiRequest<T>({
+    return apiRequest<T>({
       request,
       configBaseUrl: process.env.API_BASE_URL,
       page,
-      ...rest
+      ...options
     })
 
-    // ✅ Attach safe handler WITHOUT breaking EnhancedApiPromise
-    if (key) {
-      promise.then((res) => {
-        apiStore.set(key, res.body)
-      })
-    }
+    // // ✅ Attach safe handler WITHOUT breaking EnhancedApiPromise
+    // if (key) {
+    //   promise.then((res) => {
+    //     apiStore.set(key, res.body)
+    //   })
+    // }
 
-    return promise   // ✅ still EnhancedApiPromise
+   
   }
 
   await use(client)

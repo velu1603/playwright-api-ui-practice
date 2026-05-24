@@ -6,15 +6,23 @@ import type {
   ValidatedApiResponse
 } from '../types'
 import type { EnhancedApiResponse } from '../internal/response-extension'
-
+import { ZodSchema, infer as zInfer } from 'zod'
 /** Enhanced Promise with validateSchema method */
 export interface EnhancedApiPromise<T = unknown> extends Promise<
   EnhancedApiResponse<T>
 > {
-  validateSchema<TValidated = T>(
-    schema: SupportedSchema,
-    options?: ValidateSchemaOptions
-  ): Promise<ValidatedApiResponse<TValidated>>
+  
+validateSchema<
+  TSchema extends SupportedSchema
+>(
+  schema: TSchema,
+  options?: ValidateSchemaOptions
+): Promise<
+  ValidatedApiResponse<
+    TSchema extends ZodSchema<any> ? zInfer<TSchema> : T
+  >
+>
+
 }
 
 /** Create enhanced promise with validateSchema method */

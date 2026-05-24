@@ -107,6 +107,13 @@ const createApiCallHtml = async (
   responseData: ResponseDataInterface
 ): Promise<string> => {
   const callId = Math.floor(10000000 + Math.random() * 90000000)
+  
+// ✅ NEW: Clean schema display
+  const schemaDisplay =
+    responseData.validationResult?.schemaInfo?.includes('Zod')
+      ? '✅ Zod schema validated successfully'
+      : formatJson(responseData.validationResult?.schema ?? {})
+
 
   // Add validation results section if present
   const validationSection = responseData.validationResult
@@ -130,13 +137,14 @@ const createApiCallHtml = async (
                                     ${responseData.validationResult.errors.map((err) => `<li>${err}</li>`).join('')}
                                 </ul>
                               </div>`
-                            : '<span style="color: #0d0; font-weight: bold;">✅ All validations passed successfully</span>',
+                            : '<span style="color: #0d0; font-weight: bold;">PASS ✅ All validations passed successfully</span>',
                           'VALIDATION RESULT',
                           callId,
                           true
                         )}
                         ${await createValidationTab(
-                          formatJson(responseData.validationResult.schema),
+                          //formatJson(responseData.validationResult.schema),
+                          schemaDisplay,
                           'SCHEMA',
                           callId
                         )}
@@ -317,6 +325,7 @@ const createApiCallReportAttachment = async (
 ): Promise<string> => {
   return `<html>
         <head>
+            <meta charset="UTF-8"> 
             <title>API Call Report</title>
             ${inlineStyles}
         </head>
