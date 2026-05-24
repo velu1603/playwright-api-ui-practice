@@ -109,7 +109,8 @@ export type OperationRequestParams<Op extends OperationShape> = {
 
 export type ApiRequestResponse<T = unknown> = {
   status: number
-  body: T
+  body: T | null
+  ok: boolean
 }
 
 /** Creates a step name for API requests that will appear in the Playwright UI */
@@ -173,12 +174,12 @@ const shouldRetry = (status: number, retryStatusCodes: number[]): boolean => {
  * Execute API request with retry logic (similar to Cypress)
  */
 const executeWithRetry = async <T>(
-  requestFn: () => Promise<{ status: number; body: T }>,
+  requestFn: () => Promise<ApiRequestResponse<T>>,
   config: Required<ApiRetryConfig>,
   context: string
-): Promise<{ status: number; body: T }> => {
+): Promise<ApiRequestResponse<T>> => {
   let lastError: Error | undefined
-  let lastResponse: { status: number; body: T } | undefined
+  let lastResponse: ApiRequestResponse<T> | undefined
 
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
     try {
@@ -292,7 +293,7 @@ const apiRequestBase = async <T = unknown>({
   const context = `${method} ${fullUrl}`
 
   // Define the request execution function for retry logic
-  const executeRequest = async (): Promise<{ status: number; body: T }> => {
+  const executeRequest = async (): Promise<ApiRequestResponse<T>> => {
     // Execute the request with timing
     const startTime = Date.now()
     const response = await requestFn()
@@ -301,21 +302,65 @@ const apiRequestBase = async <T = unknown>({
 
     // Parse response body based on content type
     const contentType = response.headers()['content-type'] || ''
-    const parseResponseBody = async (): Promise<unknown> => {
+    const parseResponseBody = async (): Promise<T | null> => {
+  try {
+    // ✅ Handle 204 or empty responses FIRST
+    if (status === 204 || method === 'HEAD') {
+      return null
+    }
+
+    const text = await response.text()
+
+    // ✅ Empty body safety (very important)
+    if (!text || text.trim() === '') {
+      return null
+    }
+
+    // ✅ JSON parsing (safe)
+    if (contentType.includes('application/json') ||
+        text.startsWith('{') ||
+        text.startsWith('[')
+    ) {
       try {
-        if (contentType.includes('application/json')) {
-          return await response.json()
-        } else if (contentType.includes('text/')) {
-          return await response.text()
-        }
-        return null
-      } catch (err) {
+        return JSON.parse(text)
+      } catch {
         await getLogger().warning(
-          `Failed to parse response body for status ${status}: ${err}`
+          `Invalid JSON response for status ${status}, returning raw text`
         )
-        return null
+        return text as unknown as T
       }
     }
+
+    // ✅ Text fallback
+    if (contentType.includes('text/')) {
+      return text as unknown as T
+    }
+
+    // ✅ Default fallback
+    return text as unknown as T
+  } catch (err) {
+    await getLogger().warning(
+      `Failed to parse response body for status ${status}: ${err}`
+    )
+    return null
+  }
+}
+
+    // const parseResponseBody = async (): Promise<unknown> => {
+    //   try {
+    //     if (contentType.includes('application/json')) {
+    //       return await response.json()
+    //     } else if (contentType.includes('text/')) {
+    //       return await response.text()
+    //     }
+    //     return null
+    //   } catch (err) {
+    //     await getLogger().warning(
+    //       `Failed to parse response body for status ${status}: ${err}`
+    //     )
+    //     return null
+    //   }
+    // }
 
     const responseBody = await parseResponseBody()
 
@@ -336,7 +381,10 @@ const apiRequestBase = async <T = unknown>({
       })
     }
 
-    return { status, body: responseBody as T }
+    return { 
+      status, 
+      body: responseBody,
+      ok: status >= 200 && status < 300 }
   }
 
   // Use retry logic by default (like Cypress), only disable if explicitly set to maxRetries: 0
