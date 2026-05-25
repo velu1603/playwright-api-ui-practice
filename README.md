@@ -214,6 +214,132 @@ project-root/
 
 npx playwright test --project=api
 
+Enhancement 1
+
+🧪 Usage – Advanced Data-Driven Testing
+Now this framework supports dynamic, scenario-based, and partial updates using a Data Factory pattern.
+✅ Creating Bookings
+✅ Simple Create (default behavior)
+test('Create booking', async ({ apiClient }) => {
+  const created = await createBooking(apiClient)
+
+  expect(created.bookingid).toBeDefined()
+})
+
+
+✅ Create with Overrides
+test('Create booking without deposit', async ({ apiClient }) => {
+  const created = await createBooking(apiClient, {
+    depositpaid: false
+  })
+
+  expect(created.booking.depositpaid).toBe(false)
+})
+
+✅ Create Using Data Factory (Scenario-Based)
+import { bookingFactory } from '../data/booking-factory'
+
+test('Create long-stay booking', async ({ apiClient }) => {
+  const booking = bookingFactory.longStay()
+
+  const response = await apiClient({
+    method: 'POST',
+    path: '/booking',
+    body: booking
+  })
+
+  expect(response.status).toBe(200)
+})
+🔁 Updating Bookings (Dynamic & Partial Updates)
+
+✅ Dynamic Partial Updates (Recommended)
+import { updateFactory } from '../data/update-factory'
+
+test('Update booking dynamically', async ({ apiClient }) => {
+
+  const created = await createBooking(apiClient)
+  const id = created.bookingid
+
+  const updateData = updateFactory.randomPartial()
+
+  const updated = await updateBooking(apiClient, id, updateData)
+
+  expect(updated.status).toBe(200)
+  expect(updated.body).toMatchObject(updateData)
+})
+
+✅ Randomized updates on every run
+✅ Supports partial field updates
+✅ No hardcoding
+
+✅ Real-World Update Scenario
+
+test('User updates booking details', async ({ apiClient }) => {
+
+  const created = await createBooking(apiClient)
+  const id = created.bookingid
+
+  const updateData = {
+    bookingdates: {
+      checkin: '2026-07-01',
+      checkout: '2026-07-10'
+    },
+    totalprice: 400
+  }
+
+  const updated = await updateBooking(apiClient, id, updateData)
+
+  expect(updated.body.bookingdates).toMatchObject(updateData.bookingdates)
+  expect(updated.body.totalprice).toBe(400)
+})
+
+✅ Simulates real user behavior (rescheduling)
+✅ Validates business scenarios
+
+🧠 Data Factory Pattern
+The framework uses a factory-based test data system:
+✅ Booking Factory
+  bookingFactory.standard()
+  bookingFactory.longStay()
+  bookingFactory.premium()
+👉 Generates realistic, reusable data for different scenarios
+
+✅ Update Factory
+  updateFactory.randomPartial()
+👉 Produces dynamic, partial updates on each run
+
+✅ Benefits
+
+✅ Eliminates hardcoded test data
+✅ Enables realistic API scenarios
+✅ Supports both full and partial updates
+✅ Improves test coverage through randomness
+✅ Keeps tests clean and maintainable
+
+🧠 Key Testing Philosophy
+
+Tests should define intent, not data.
+The data factory handles generation, while tests focus on validation
+🏗️ Updated Data Flow
+Test
+  ↓
+Data Factory (bookingFactory / updateFactory)
+  ↓
+API Helper (create / update / delete)
+  ↓
+apiClient (auth + request handling)
+  ↓
+API Response
+
+
+
+
+
+
+
+
+
+
 
 🔮 Future Enhancements
 
