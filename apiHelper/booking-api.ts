@@ -29,3 +29,18 @@ export const getBooking = async (apiClient: any, id: number) => {
 
   return resp.body
 }
+
+
+export const deleteBooking = async (apiClient: any, id: number) => {
+  const resp = await apiClient({
+    method: 'DELETE',
+    path: `/booking/${id}`,
+    authType: 'cookie',
+    //authType: 'basic',
+
+    uiMode:true,
+    testStep:true,
+  })
+
+  return resp
+}

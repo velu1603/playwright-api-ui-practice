@@ -1,14 +1,12 @@
-import { test, expect } from '../../fixtures/api-fixture'
-import {generateBooking} from '../../data/booking-generator'
-import { createBooking,getBooking } from '../../apiHelper/booking-api'
-import { bookingSchema, CreateBookingResponse } from '../../schema/booking.schema'
+import { test, expect }                           from '../../fixtures/api-fixture'
+import {generateBooking}                          from '../../data/booking-generator'
+import { createBooking,getBooking,deleteBooking } from '../../apiHelper/booking-api'
+import { bookingSchema }                          from '../../schema/booking.schema'
 
 
 
 test.describe('Customer Screening API', () => {
-  
-  
-  test('Ping HealthCheck check to confirm whether the API is up and running. ',async({apiClient})=>{
+  test('Ping HealthCheck check to confirm API is up and running. ',async({apiClient})=>{
     const resp = await apiClient({
       method:'GET',
       path:'/ping',
@@ -89,6 +87,25 @@ test.describe('Customer Screening API', () => {
     
 
   })
+
+  test('Create, Get and Delete booking', async ({ apiClient }) => {
+    const created = await createBooking(apiClient)
+
+
+  const fetched = await getBooking(apiClient, created.bookingid)
+
+  expect(fetched).toMatchObject(created.booking)
+
+
+// ✅ cleanup
+  const deleted = await deleteBooking(apiClient, created.bookingid)
+
+  expect(deleted.status,`Delete successful `).toBe(201)
+
+
+  })
+
+  
 
 
 
