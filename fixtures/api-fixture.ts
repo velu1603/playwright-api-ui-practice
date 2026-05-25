@@ -1,6 +1,7 @@
 import { test as base, expect } from '@playwright/test'
 import { apiRequest, type ApiRequestParams } from '../src/api-request/api-request'
 import type { EnhancedApiPromise } from '../src/api-request/schema-validation/internal/promise-extension'
+import '../utils/custom-expect'
 
 /* ===========================================================================================
    ✅ FRAMEWORK OVERVIEW
