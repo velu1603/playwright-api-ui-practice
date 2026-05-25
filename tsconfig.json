@@ -1,11 +1,26 @@
 {
   "compilerOptions": {
-    "types": ["node", "@playwright/test"]
+    "types": ["node", "@playwright/test"],
+
+    "moduleResolution": "bundler",
+
+    "paths": {
+      "@data/*": ["./data/*"],
+      "@api/*": ["./apiHelper/*"],
+      "@fixtures/*": ["./fixtures/*"],
+      "@utils/*": ["./utils/*"]
+    },
+
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
   },
   "include": [
     "tests",
     "fixtures",
     "utils",
-    "types"  
+    "types",
+    "data",
+    "apiHelper"
   ]
 }
