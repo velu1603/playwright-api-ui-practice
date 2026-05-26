@@ -113,8 +113,7 @@ const createApiCallHtml = async (
     responseData.validationResult?.schemaInfo?.includes('Zod')
       ? '✅ Zod schema validated successfully'
       : formatJson(responseData.validationResult?.schema ?? {})
-
-
+      
   // Add validation results section if present
   const validationSection = responseData.validationResult
     ? `

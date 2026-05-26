@@ -24,7 +24,7 @@ export function buildValidationResult(
   validationErrors: ValidationErrorDetail[],
   schemaFormat: ValidationResult['schemaFormat'],
   validationTime: number,
-  schema?: object
+  schema?: Record<string,unknown>
 ): ValidationResult {
   const success = validationErrors.length === 0
 

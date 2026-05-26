@@ -11,7 +11,6 @@ import { ZodSchema, infer as zInfer } from 'zod'
 export interface EnhancedApiPromise<T = unknown> extends Promise<
   EnhancedApiResponse<T>
 > {
-  
 validateSchema<
   TSchema extends SupportedSchema
 >(

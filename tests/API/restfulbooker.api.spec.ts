@@ -158,8 +158,8 @@ const updateData = {
     expect(updated.status,`Update status is ${updated.status}`).toBe(200)
 
     expect(updated.body.bookingdates,`Updated booking dates match`).toMatchObject(updateData.bookingdates)
-    expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD`).toBeValidDateFormat()
-     expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD`).toBeValidDateFormat()
+    expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`).toBeValidDateFormat()
+     expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
   })
 
   test('Mixed dynamic update', async ({ apiClient }) => {
@@ -189,7 +189,7 @@ test('Upgrade booking to premium', async ({ apiClient }) => {
 
   const updated = await updateBooking(apiClient, id, premiumUpdate)
 
-  expect(updated.status).toBe(200)
+  expect(updated.status,`✅ Status is ${updated.status}`).toBe(200)
   expect(updated.body).toMatchObject(premiumUpdate)
 
 })
@@ -200,3 +200,4 @@ test('Upgrade booking to premium', async ({ apiClient }) => {
 
 
 //npx playwright test --project=api
+// schema auto typing

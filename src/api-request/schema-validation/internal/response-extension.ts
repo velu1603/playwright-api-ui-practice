@@ -60,6 +60,7 @@ function createSuccessResponse<TValidated>(
   return {
     status: originalResponse.status,
     body: originalResponse.body as unknown as TValidated,
+    ok: originalResponse.ok,
     validationResult,
     originalResponse:
       originalResponse as unknown as ApiRequestResponse<TValidated>
@@ -74,6 +75,7 @@ function createReturnModeResponse<TValidated>(
   return {
     status: originalResponse.status,
     body: originalResponse.body as unknown as TValidated,
+    ok: originalResponse.ok,
     validationResult,
     originalResponse:
       originalResponse as unknown as ApiRequestResponse<TValidated>

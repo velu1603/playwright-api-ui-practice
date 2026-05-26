@@ -64,7 +64,7 @@ export type ValidationResult = {
   schema?: object
   /** UI display data if uiMode is enabled */
   uiData?: {
-    statusIcon: 'PASS ✅' | 'Fail ❌'
+    statusIcon: '✅' | '❌'
     validationSummary: string
     schemaInfo: string
     errorDetails?: string[]
