@@ -1,10 +1,9 @@
-import { defineConfig, devices } from '@playwright/test';
-import {config} from 'dotenv';
-config()
+import { defineConfig, devices } from "@playwright/test";
+import { config } from "dotenv";
+config();
 
-
-const UI_BASE_URL = process.env.UI_BASE_URL || 'http://localhost:4200';
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
+const UI_BASE_URL = process.env.UI_BASE_URL || "http://localhost:4200";
+const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3000";
 
 /**
  * Read environment variables from file.
@@ -18,7 +17,7 @@ const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: './tests',
+  testDir: "./tests",
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -28,45 +27,52 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [
-    ['dot'],
-    ['html', { /*outputFolder: 'playwright-report'*/ title:'Restful Booker API testing', open:'never' }],
-    //['json', { /*outputFile: 'playwright-report/results.json' */ }],
-    ['list', {printSteps: false}],
-    ['allure-playwright'],
-    ['monocart-reporter', {name: 'Test Report', outputFile: './monocart-report/index.html'}]
-  ],
+  reporter: process.env.CI
+    ? [["dot"], ["allure-playwright"]]
+    : [
+        ["dot"],
+        [
+          "html",
+          {
+            /*outputFolder: 'playwright-report'*/ title:
+              "Restful Booker API testing",
+            open: "never",
+          },
+        ],
+        //['json', { /*outputFile: 'playwright-report/results.json' */ }],
+        ["list", { printSteps: false }],
+        ["allure-playwright"],
+        [
+          "monocart-reporter",
+          { name: "Test Report", outputFile: "./monocart-report/index.html" },
+        ],
+      ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
     // baseURL: 'http://localhost:3000',
 
-     //baseURL: UI_BASE_URL,
-      
+    //baseURL: UI_BASE_URL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-     ignoreHTTPSErrors: true
+    trace: "on-first-retry",
+    ignoreHTTPSErrors: true,
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
-      name: 'ui-chromium',
-      use: { ...devices['Desktop Chrome'] ,
-      baseURL: UI_BASE_URL,
-      },
-      testMatch: /.*\.ui\.spec\.ts/
-      
+      name: "ui-chromium",
+      use: { ...devices["Desktop Chrome"], baseURL: UI_BASE_URL },
+      testMatch: /.*\.ui\.spec\.ts/,
     },
- {
-      name: 'API-testing',
+    {
+      name: "API-testing",
       use: {
         baseURL: API_BASE_URL,
       },
       testMatch: /.*\.api\.spec\.ts/,
     },
-
 
     // {
     //   name: 'firefox',

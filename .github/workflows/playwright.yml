@@ -47,7 +47,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright tests
-        run: npx playwright test --project=${{ matrix.project }} --reporter=dot
+        run: npx playwright test --project=${{ matrix.project }}
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           UI_BASE_URL: https://automationintesting.online
