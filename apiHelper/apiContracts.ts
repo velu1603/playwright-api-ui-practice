@@ -1,4 +1,3 @@
-
 /**********************************
  * Schema Registry Pattern
  * Create a contract registry
@@ -55,19 +54,16 @@
 * 
 * 
 */
-    
-
 
 import {
   bookingDetailsSchema,
   createBookingSchema,
-  getAllBookingsSchema
-} from '@schema/booking.schema'
+  getAllBookingsSchema,
+} from "@schema/booking.schema";
 
 export const apiContracts = {
-    createBooking:  createBookingSchema,
-    getBooking:     bookingDetailsSchema,
-    getAllBooking:  getAllBookingsSchema,
-    updateBooking:  bookingDetailsSchema
-
-}
+  createBooking: createBookingSchema,
+  getBooking: bookingDetailsSchema,
+  getAllBooking: getAllBookingsSchema,
+  updateBooking: bookingDetailsSchema,
+};

@@ -16,12 +16,5 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": [
-    "tests",
-    "fixtures",
-    "utils",
-    "types",
-    "data",
-    "apiHelper"
-  ]
+  "include": ["tests", "fixtures", "utils", "types", "data", "apiHelper"]
 }

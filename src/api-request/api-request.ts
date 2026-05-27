@@ -1,35 +1,35 @@
-import { type APIRequestContext, type Page } from '@playwright/test'
-import { test } from '@playwright/test'
-import { getLogger } from '../../utils/logger'
+import { type APIRequestContext, type Page } from "@playwright/test";
+import { test } from "@playwright/test";
+import { getLogger } from "../../utils/logger";
 import {
   addApiCardToUI,
   type RequestDataInterface,
-  type ResponseDataInterface
-} from './ui-display'
+  type ResponseDataInterface,
+} from "./ui-display";
 import {
   createEnhancedResponse,
-  type EnhancedApiResponse
-} from '../api-request/schema-validation/internal/response-extension'
+  type EnhancedApiResponse,
+} from "../api-request/schema-validation/internal/response-extension";
 import {
   createEnhancedPromise,
-  type EnhancedApiPromise
-} from '../api-request/schema-validation/internal/promise-extension'
+  type EnhancedApiPromise,
+} from "../api-request/schema-validation/internal/promise-extension";
 
 /** Retry configuration for API requests (like Cypress - only retries 5xx server errors, never 4xx client errors) */
 export type ApiRetryConfig = {
   /** Maximum number of retry attempts for server errors (default: 3) */
-  maxRetries?: number
+  maxRetries?: number;
   /** Initial delay between retries in milliseconds (default: 100ms) */
-  initialDelayMs?: number
+  initialDelayMs?: number;
   /** Exponential backoff multiplier (default: 2) */
-  backoffMultiplier?: number
+  backoffMultiplier?: number;
   /** Maximum delay between retries in milliseconds (default: 5000ms) */
-  maxDelayMs?: number
+  maxDelayMs?: number;
   /** Whether to add random jitter to delays (default: true) */
-  enableJitter?: boolean
+  enableJitter?: boolean;
   /** Which status codes to retry (default: [500, 502, 503, 504] - only 5xx server errors) */
-  retryStatusCodes?: number[]
-}
+  retryStatusCodes?: number[];
+};
 
 /** Custom error type for API request failures */
 export class ApiRequestError extends Error {
@@ -37,10 +37,10 @@ export class ApiRequestError extends Error {
     message: string,
     public readonly status: number,
     public readonly response?: unknown,
-    public readonly attempt?: number
+    public readonly attempt?: number,
   ) {
-    super(message)
-    this.name = 'ApiRequestError'
+    super(message);
+    this.name = "ApiRequestError";
   }
 }
 
@@ -48,85 +48,85 @@ export class ApiRequestError extends Error {
 export class ApiNetworkError extends Error {
   constructor(
     message: string,
-    public readonly originalError?: Error
+    public readonly originalError?: Error,
   ) {
-    super(message)
-    this.name = 'ApiNetworkError'
+    super(message);
+    this.name = "ApiNetworkError";
   }
 }
 
 export type ApiRequestParams = {
-  request: APIRequestContext
-  method: 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
-  path: string
-  baseUrl?: string
-  configBaseUrl?: string // configBaseUrl from Playwright config
-  body?: unknown
-  headers?: Record<string, string>
-  params?: Record<string, string | boolean | number>
-  testStep?: boolean // Whether to wrap the call in test.step (defaults to true)
-  uiMode?: boolean // Whether to show rich UI display (defaults to false, unless API_E2E_UI_MODE env var is set)
-  page?: Page // Page context for UI display (automatically provided by fixtures)
+  request: APIRequestContext;
+  method: "POST" | "GET" | "PUT" | "DELETE" | "PATCH" | "HEAD";
+  path: string;
+  baseUrl?: string;
+  configBaseUrl?: string; // configBaseUrl from Playwright config
+  body?: unknown;
+  headers?: Record<string, string>;
+  params?: Record<string, string | boolean | number>;
+  testStep?: boolean; // Whether to wrap the call in test.step (defaults to true)
+  uiMode?: boolean; // Whether to show rich UI display (defaults to false, unless API_E2E_UI_MODE env var is set)
+  page?: Page; // Page context for UI display (automatically provided by fixtures)
   /** Retry configuration for handling failed requests (enabled by default like Cypress - set maxRetries: 0 to disable) */
-  retryConfig?: ApiRetryConfig
+  retryConfig?: ApiRetryConfig;
   /** Request timeout in milliseconds (overrides Playwright's default of 30000ms) */
-  timeout?: number
-}
+  timeout?: number;
+};
 
 /** Structural shape for operation definitions — works with any code generator (duck typing) */
 export type OperationShape = {
-  path: string
-  method: 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
-  response: unknown
-  request: unknown
-  query?: unknown
-}
+  path: string;
+  method: "POST" | "GET" | "PUT" | "DELETE" | "PATCH" | "HEAD";
+  response: unknown;
+  request: unknown;
+  query?: unknown;
+};
 
 /**
  * Parameters for the operation-based apiRequest overload.
  * Mutually exclusive with classic params: method/path are forbidden here.
  */
 export type OperationRequestParams<Op extends OperationShape> = {
-  request: APIRequestContext
-  operation: Op
-  body?: Op['request']
-  query?: Op['query']
+  request: APIRequestContext;
+  operation: Op;
+  body?: Op["request"];
+  query?: Op["query"];
   /** Raw params escape hatch — merged with serialized query (params wins on conflict) */
-  params?: Record<string, string | boolean | number>
-  baseUrl?: string
-  configBaseUrl?: string
-  headers?: Record<string, string>
-  testStep?: boolean
-  uiMode?: boolean
-  page?: Page
-  retryConfig?: ApiRetryConfig
+  params?: Record<string, string | boolean | number>;
+  baseUrl?: string;
+  configBaseUrl?: string;
+  headers?: Record<string, string>;
+  testStep?: boolean;
+  uiMode?: boolean;
+  page?: Page;
+  retryConfig?: ApiRetryConfig;
   /** Request timeout in milliseconds (overrides Playwright's default of 30000ms) */
-  timeout?: number
+  timeout?: number;
   /** Forbidden in operation mode — enforced at type level */
-  method?: never
-  path?: never
-}
+  method?: never;
+  path?: never;
+};
 
 export type ApiRequestResponse<T = unknown> = {
-  status: number
-  body: T | null
-  ok: boolean
-}
+  status: number;
+  body: T | null;
+  ok: boolean;
+};
 
 /** Creates a step name for API requests that will appear in the Playwright UI */
 const createStepName = ({
   method,
   path,
   baseUrl,
-  configBaseUrl = ''
+  configBaseUrl = "",
 }: ApiRequestParams): string => {
-  const effectiveBaseUrl = baseUrl || configBaseUrl || ''
+  const effectiveBaseUrl = baseUrl || configBaseUrl || "";
   const fullPath = effectiveBaseUrl
     ? joinUrlParts(effectiveBaseUrl, path)
-    : path
+    : path;
 
-  return `API ${method} ${fullPath}`
-}
+  return `API ${method} ${fullPath}`;
+};
 /** Default retry configuration following Cypress patterns - only retries 5xx server errors, not 4xx client errors */
 const DEFAULT_RETRY_CONFIG: Required<ApiRetryConfig> = {
   maxRetries: 3,
@@ -134,41 +134,41 @@ const DEFAULT_RETRY_CONFIG: Required<ApiRetryConfig> = {
   backoffMultiplier: 2,
   maxDelayMs: 5000,
   enableJitter: true,
-  retryStatusCodes: [500, 502, 503, 504] // Only 5xx server errors (transient issues), never 4xx client errors
-}
+  retryStatusCodes: [500, 502, 503, 504], // Only 5xx server errors (transient issues), never 4xx client errors
+};
 
 /**
  * Sleep for a specified number of milliseconds
  */
 const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Calculate the delay for a retry attempt with exponential backoff and optional jitter
  */
 const calculateRetryDelay = (
   attempt: number,
-  config: Required<ApiRetryConfig>
+  config: Required<ApiRetryConfig>,
 ): number => {
   const baseDelay =
-    config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt)
-  const clampedDelay = Math.min(baseDelay, config.maxDelayMs)
+    config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt);
+  const clampedDelay = Math.min(baseDelay, config.maxDelayMs);
 
   if (config.enableJitter) {
     // Add random jitter ±25% to prevent thundering herd
-    const jitter = clampedDelay * 0.25 * (Math.random() * 2 - 1)
-    return Math.max(0, clampedDelay + jitter)
+    const jitter = clampedDelay * 0.25 * (Math.random() * 2 - 1);
+    return Math.max(0, clampedDelay + jitter);
   }
 
-  return clampedDelay
-}
+  return clampedDelay;
+};
 
 /**
  * Determine if a status code should trigger a retry
  */
 const shouldRetry = (status: number, retryStatusCodes: number[]): boolean => {
-  return retryStatusCodes.includes(status)
-}
+  return retryStatusCodes.includes(status);
+};
 
 /**
  * Execute API request with retry logic (similar to Cypress)
@@ -176,50 +176,50 @@ const shouldRetry = (status: number, retryStatusCodes: number[]): boolean => {
 const executeWithRetry = async <T>(
   requestFn: () => Promise<ApiRequestResponse<T>>,
   config: Required<ApiRetryConfig>,
-  context: string
+  context: string,
 ): Promise<ApiRequestResponse<T>> => {
-  let lastError: Error | undefined
-  let lastResponse: ApiRequestResponse<T> | undefined
+  let lastError: Error | undefined;
+  let lastResponse: ApiRequestResponse<T> | undefined;
 
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
     try {
-      const response = await requestFn()
+      const response = await requestFn();
 
       // Check if response status should trigger a retry
       if (
         attempt < config.maxRetries &&
         shouldRetry(response.status, config.retryStatusCodes)
       ) {
-        lastResponse = response
-        const delay = calculateRetryDelay(attempt, config)
+        lastResponse = response;
+        const delay = calculateRetryDelay(attempt, config);
 
         await getLogger().warning(
-          `${context} returned ${response.status} (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay.toFixed(0)}ms`
-        )
+          `${context} returned ${response.status} (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay.toFixed(0)}ms`,
+        );
 
-        await sleep(delay)
-        continue
+        await sleep(delay);
+        continue;
       }
 
       // Success or non-retryable status code
-      return response
+      return response;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error))
+      lastError = error instanceof Error ? error : new Error(String(error));
 
       if (attempt === config.maxRetries) {
         // Final attempt failed with an error
         throw new ApiNetworkError(
           `${context} failed after ${config.maxRetries + 1} attempts: ${lastError.message}`,
-          lastError
-        )
+          lastError,
+        );
       }
 
-      const delay = calculateRetryDelay(attempt, config)
+      const delay = calculateRetryDelay(attempt, config);
       await getLogger().warning(
-        `${context} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay.toFixed(0)}ms: ${lastError.message}`
-      )
+        `${context} failed (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay.toFixed(0)}ms: ${lastError.message}`,
+      );
 
-      await sleep(delay)
+      await sleep(delay);
     }
   }
 
@@ -229,16 +229,16 @@ const executeWithRetry = async <T>(
       `${context} failed with status ${lastResponse.status} after ${config.maxRetries + 1} attempts`,
       lastResponse.status,
       lastResponse.body,
-      config.maxRetries + 1
-    )
+      config.maxRetries + 1,
+    );
   }
 
   // Fallback error
   throw new ApiNetworkError(
     `${context} failed after ${config.maxRetries + 1} attempts`,
-    lastError
-  )
-}
+    lastError,
+  );
+};
 /**
  * Base implementation of API request without test step wrapping
  */
@@ -247,14 +247,14 @@ const apiRequestBase = async <T = unknown>({
   method,
   path,
   baseUrl,
-  configBaseUrl = '', // configBaseUrl from Playwright config
+  configBaseUrl = "", // configBaseUrl from Playwright config
   body = null,
   headers,
   params,
   uiMode = false,
   page,
   retryConfig,
-  timeout
+  timeout,
 }: ApiRequestParams): Promise<ApiRequestResponse<T>> => {
   // common options; if there's a prop, add it to the options object
   // Note: Playwright expects 'data' for the request body, not 'body'
@@ -263,18 +263,20 @@ const apiRequestBase = async <T = unknown>({
     body && { data: body }, // Map 'body' to 'data' for Playwright
     headers && { headers },
     params && { params },
-    timeout !== undefined && timeout >= 0 && { timeout }
-  )
+    timeout !== undefined && timeout >= 0 && { timeout },
+  );
 
   // Three-tier URL resolution strategy:
   // 1. Use explicitly provided baseUrl if available (e.g. baseUrl='https://api.example.com/')
   // 2. Otherwise fall back to Playwright config's configBaseUrl (e.g. configBaseUrl='https://api-dev.com/')
   // 3. If neither is available, use empty string
-  const effectiveBaseUrl = baseUrl || configBaseUrl || ''
+  const effectiveBaseUrl = baseUrl || configBaseUrl || "";
   // Combine effectiveBaseUrl with path
   // When base exists: https://api-dev.com/ + /users = https://api-dev.com/users
   // When no base: /users = /users
-  const fullUrl = effectiveBaseUrl ? joinUrlParts(effectiveBaseUrl, path) : path
+  const fullUrl = effectiveBaseUrl
+    ? joinUrlParts(effectiveBaseUrl, path)
+    : path;
 
   // map methods to PW request functions
   const methodMap = {
@@ -283,68 +285,69 @@ const apiRequestBase = async <T = unknown>({
     PUT: () => request.put(fullUrl, options),
     DELETE: () => request.delete(fullUrl, options),
     PATCH: () => request.patch(fullUrl, options),
-    HEAD: () => request.head(fullUrl, options)
-  }
+    HEAD: () => request.head(fullUrl, options),
+  };
 
-  const requestFn = methodMap[method]
-  if (!requestFn) throw new Error(`Unsupported HTTP method: ${method}`)
+  const requestFn = methodMap[method];
+  if (!requestFn) throw new Error(`Unsupported HTTP method: ${method}`);
   // Merge retry config with defaults
-  const effectiveRetryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig }
-  const context = `${method} ${fullUrl}`
+  const effectiveRetryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
+  const context = `${method} ${fullUrl}`;
 
   // Define the request execution function for retry logic
   const executeRequest = async (): Promise<ApiRequestResponse<T>> => {
     // Execute the request with timing
-    const startTime = Date.now()
-    const response = await requestFn()
-    const duration = Date.now() - startTime
-    const status = response.status()
+    const startTime = Date.now();
+    const response = await requestFn();
+    const duration = Date.now() - startTime;
+    const status = response.status();
 
     // Parse response body based on content type
-    const contentType = response.headers()['content-type'] || ''
+    const contentType = response.headers()["content-type"] || "";
     const parseResponseBody = async (): Promise<T | null> => {
-  try {
-    // ✅ Handle 204 or empty responses FIRST
-    if (status === 204 || method === 'HEAD') {
-      return null
-    }
-
-    const text = await response.text()
-
-    // ✅ Empty body safety (very important)
-    if (!text || text.trim() === '') {
-      return null
-    }
-
-    // ✅ JSON parsing (safe)
-    if (contentType.includes('application/json') ||
-        text.startsWith('{') ||
-        text.startsWith('[')
-    ) {
       try {
-        return JSON.parse(text)
-      } catch {
+        // ✅ Handle 204 or empty responses FIRST
+        if (status === 204 || method === "HEAD") {
+          return null;
+        }
+
+        const text = await response.text();
+
+        // ✅ Empty body safety (very important)
+        if (!text || text.trim() === "") {
+          return null;
+        }
+
+        // ✅ JSON parsing (safe)
+        if (
+          contentType.includes("application/json") ||
+          text.startsWith("{") ||
+          text.startsWith("[")
+        ) {
+          try {
+            return JSON.parse(text);
+          } catch {
+            await getLogger().warning(
+              `Invalid JSON response for status ${status}, returning raw text`,
+            );
+            return text as unknown as T;
+          }
+        }
+
+        // ✅ Text fallback
+        if (contentType.includes("text/")) {
+          return text as unknown as T;
+        }
+
+        // ✅ Default fallback
+        return text as unknown as T;
+      } catch (err) {
         await getLogger().warning(
-          `Invalid JSON response for status ${status}, returning raw text`
-        )
-        return text as unknown as T
+          `Failed to parse response body for status ${status}: ${err}`,
+        );
+        return null;
       }
-    }
-
-    // ✅ Text fallback
-    if (contentType.includes('text/')) {
-      return text as unknown as T
-    }
-
-    // ✅ Default fallback
-    return text as unknown as T
-  } catch (err) {
-    await getLogger().warning(
-      `Failed to parse response body for status ${status}: ${err}`
-    )
-    return null
-  }
-}
+    };
 
     // const parseResponseBody = async (): Promise<unknown> => {
     //   try {
@@ -362,7 +365,7 @@ const apiRequestBase = async <T = unknown>({
     //   }
     // }
 
-    const responseBody = await parseResponseBody()
+    const responseBody = await parseResponseBody();
 
     // Display UI if uiMode is enabled or environment variable is set
     if (uiMode || shouldDisplayApiUI()) {
@@ -377,53 +380,54 @@ const apiRequestBase = async <T = unknown>({
         duration,
         status,
         page,
-        uiMode
-      })
+        uiMode,
+      });
     }
 
-    return { 
-      status, 
+    return {
+      status,
       body: responseBody,
-      ok: status >= 200 && status < 300 }
-  }
+      ok: status >= 200 && status < 300,
+    };
+  };
 
   // Use retry logic by default (like Cypress), only disable if explicitly set to maxRetries: 0
   if (retryConfig?.maxRetries === 0) {
     // Explicitly disabled - execute directly without retry
-    return executeRequest()
+    return executeRequest();
   } else {
     // Default retry behavior (like Cypress) - always retry 5xx errors
-    return executeWithRetry(executeRequest, effectiveRetryConfig, context)
+    return executeWithRetry(executeRequest, effectiveRetryConfig, context);
   }
-}
+};
 /**
  * Determines if API UI should be displayed based on environment variables
  */
 const shouldDisplayApiUI = (): boolean => {
-  const envUiMode = process.env.API_E2E_UI_MODE
-  if (envUiMode === 'true') return true
-  if (envUiMode === 'false') return false
+  const envUiMode = process.env.API_E2E_UI_MODE;
+  if (envUiMode === "true") return true;
+  if (envUiMode === "false") return false;
 
   // Default is false unless explicitly enabled
-  return false
-}
+  return false;
+};
 
 /**
  * Display API call information in UI format
  */
 const displayApiUI = async (params: {
-  url: string
-  method: string
-  headers?: Record<string, string>
-  data?: unknown
-  params?: Record<string, string | boolean | number>
+  url: string;
+  method: string;
+  headers?: Record<string, string>;
+  data?: unknown;
+  params?: Record<string, string | boolean | number>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  response: any
-  responseBody: unknown
-  duration: number
-  status: number
-  page?: Page
-  uiMode?: boolean
+  response: any;
+  responseBody: unknown;
+  duration: number;
+  status: number;
+  page?: Page;
+  uiMode?: boolean;
 }): Promise<void> => {
   try {
     const requestData: RequestDataInterface = {
@@ -431,24 +435,24 @@ const displayApiUI = async (params: {
       method: params.method.toUpperCase(),
       headers: params.headers,
       data: params.data,
-      params: params.params
-    }
+      params: params.params,
+    };
 
     const responseData: ResponseDataInterface = {
       status: params.status,
-      statusClass: Math.floor(params.status / 100) + 'xx',
+      statusClass: Math.floor(params.status / 100) + "xx",
       statusText: params.response.statusText(),
       headers: params.response.headers(),
       body: params.responseBody,
-      duration: params.duration
-    }
+      duration: params.duration,
+    };
 
-    await addApiCardToUI(requestData, responseData, params.page, params.uiMode)
+    await addApiCardToUI(requestData, responseData, params.page, params.uiMode);
   } catch (error) {
     // Silently fail if UI display doesn't work (e.g., no page context)
-    await getLogger().debug(`UI display failed: ${error}`)
+    await getLogger().debug(`UI display failed: ${error}`);
   }
-}
+};
 
 /**
  * Simplified helper for making API requests and returning the status and JSON body.
@@ -511,33 +515,33 @@ const displayApiUI = async (params: {
 type ApiRequestFn = {
   /** Operation-based overload: types inferred from operation definition */
   <Op extends OperationShape>(
-    options: OperationRequestParams<Op>
-  ): EnhancedApiPromise<Op['response']>
+    options: OperationRequestParams<Op>,
+  ): EnhancedApiPromise<Op["response"]>;
   /** Classic overload: manual method/path/body (unchanged) */
-  <T = unknown>(options: ApiRequestParams): EnhancedApiPromise<T>
-}
+  <T = unknown>(options: ApiRequestParams): EnhancedApiPromise<T>;
+};
 
 export const apiRequest: ApiRequestFn = (<T = unknown>(
-  options: ApiRequestParams | OperationRequestParams<OperationShape>
+  options: ApiRequestParams | OperationRequestParams<OperationShape>,
 ): EnhancedApiPromise<T> => {
   const normalizedOptions: ApiRequestParams = isOperationRequest(options)
     ? normalizeOperationParams(options)
-    : (options as ApiRequestParams)
+    : (options as ApiRequestParams);
 
   // By default, wrap in test.step unless explicitly disabled
-  const useTestStep = normalizedOptions.testStep !== false
+  const useTestStep = normalizedOptions.testStep !== false;
 
   const promise = (async (): Promise<EnhancedApiResponse<T>> => {
-    let baseResponse: ApiRequestResponse<T>
+    let baseResponse: ApiRequestResponse<T>;
 
     if (useTestStep) {
       baseResponse = await test.step(
         createStepName(normalizedOptions),
-        async () => apiRequestBase<T>(normalizedOptions)
-      )
+        async () => apiRequestBase<T>(normalizedOptions),
+      );
     } else {
       // When used outside of test context (e.g., global setup)
-      baseResponse = await apiRequestBase<T>(normalizedOptions)
+      baseResponse = await apiRequestBase<T>(normalizedOptions);
     }
 
     // Create enhanced response with validateSchema method
@@ -547,96 +551,96 @@ export const apiRequest: ApiRequestFn = (<T = unknown>(
       body: normalizedOptions.body,
       headers: normalizedOptions.headers,
       page: normalizedOptions.page,
-      uiMode: normalizedOptions.uiMode
-    })
-  })()
+      uiMode: normalizedOptions.uiMode,
+    });
+  })();
 
   // Return enhanced promise with validateSchema method
-  return createEnhancedPromise(promise)
-}) as ApiRequestFn
+  return createEnhancedPromise(promise);
+}) as ApiRequestFn;
 
 /** Serialize nested query object into flat bracket-notation params (best-effort) */
 const serializeQuery = (
   obj: Record<string, unknown>,
-  prefix?: string
+  prefix?: string,
 ): Record<string, string> => {
-  const result: Record<string, string> = {}
+  const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (value === null || value === undefined) continue
-    const fullKey = prefix ? `${prefix}[${key}]` : key
+    if (value === null || value === undefined) continue;
+    const fullKey = prefix ? `${prefix}[${key}]` : key;
     if (Array.isArray(value)) {
       value.forEach((item, index) => {
-        if (item === null || item === undefined) return
-        if (typeof item === 'object') {
+        if (item === null || item === undefined) return;
+        if (typeof item === "object") {
           Object.assign(
             result,
             serializeQuery(
               item as Record<string, unknown>,
-              `${fullKey}[${index}]`
-            )
-          )
+              `${fullKey}[${index}]`,
+            ),
+          );
         } else {
-          result[`${fullKey}[${index}]`] = String(item)
+          result[`${fullKey}[${index}]`] = String(item);
         }
-      })
-    } else if (typeof value === 'object') {
+      });
+    } else if (typeof value === "object") {
       Object.assign(
         result,
-        serializeQuery(value as Record<string, unknown>, fullKey)
-      )
+        serializeQuery(value as Record<string, unknown>, fullKey),
+      );
     } else {
-      result[fullKey] = String(value)
+      result[fullKey] = String(value);
     }
   }
-  return result
-}
+  return result;
+};
 
 /** Runtime type guard with shape validation — classic fields win for backward compat */
 const isOperationRequest = (
-  options: ApiRequestParams | OperationRequestParams<OperationShape>
+  options: ApiRequestParams | OperationRequestParams<OperationShape>,
 ): options is OperationRequestParams<OperationShape> => {
   // If classic method+path are present as strings, always use classic path
   // (protects against variable-based calls that might have extra properties)
-  const opts = options as Record<string, unknown>
-  if (typeof opts.method === 'string' && typeof opts.path === 'string')
-    return false
+  const opts = options as Record<string, unknown>;
+  if (typeof opts.method === "string" && typeof opts.path === "string")
+    return false;
 
-  if (!('operation' in options) || options.operation == null) return false
-  const op = options.operation
+  if (!("operation" in options) || options.operation == null) return false;
+  const op = options.operation;
   return (
-    typeof op === 'object' &&
-    typeof op.path === 'string' &&
-    typeof op.method === 'string'
-  )
-}
+    typeof op === "object" &&
+    typeof op.path === "string" &&
+    typeof op.method === "string"
+  );
+};
 
 /** Convert operation params to classic ApiRequestParams (only reads method/path, never response/request) */
 const normalizeOperationParams = (
-  options: OperationRequestParams<OperationShape>
+  options: OperationRequestParams<OperationShape>,
 ): ApiRequestParams => {
-  const { operation, body, query, params: rawParams, ...rest } = options
+  const { operation, body, query, params: rawParams, ...rest } = options;
   const serializedQuery = query
     ? serializeQuery(query as Record<string, unknown>)
-    : {}
-  const mergedParams = { ...serializedQuery, ...rawParams }
-  const hasParams = Object.keys(mergedParams).length > 0
+    : {};
+  const mergedParams = { ...serializedQuery, ...rawParams };
+  const hasParams = Object.keys(mergedParams).length > 0;
 
   return {
     ...rest,
     method: operation.method,
     path: operation.path,
     body,
-    params: hasParams ? mergedParams : undefined
-  } as ApiRequestParams
-}
+    params: hasParams ? mergedParams : undefined,
+  } as ApiRequestParams;
+};
 
 /** URL normalization to handle edge cases with slashes */
 const joinUrlParts = (base: string, path: string): string => {
-  if (!base) return path
+  if (!base) return path;
 
   // Ensure base has trailing slash and path doesn't have leading slash
-  const normalizedBase = base.endsWith('/') ? base : `${base}/`
-  const normalizedPath = path.startsWith('/') ? path.substring(1) : path
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  const normalizedPath = path.startsWith("/") ? path.substring(1) : path;
 
-  return `${normalizedBase}${normalizedPath}`
-}
+  return `${normalizedBase}${normalizedPath}`;
+};

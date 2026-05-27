@@ -1,31 +1,31 @@
-import { faker } from '@faker-js/faker'
+import { faker } from "@faker-js/faker";
 
 /* ============================================================
    ✅ TYPES
 ============================================================ */
 
 export type BookingDates = {
-  checkin: string
-  checkout: string
-}
+  checkin: string;
+  checkout: string;
+};
 
 export type Booking = {
-  firstname: string
-  lastname: string
-  totalprice: number
-  depositpaid: boolean
-  bookingdates: BookingDates
-  additionalneeds: string
-}
+  firstname: string;
+  lastname: string;
+  totalprice: number;
+  depositpaid: boolean;
+  bookingdates: BookingDates;
+  additionalneeds: string;
+};
 
 /* ============================================================
    ✅ BASE VALUES
 ============================================================ */
 
-const baseBooking: Pick<Booking, 'additionalneeds' | 'depositpaid'> = {
-  additionalneeds: 'Breakfast',
-  depositpaid: true
-}
+const baseBooking: Pick<Booking, "additionalneeds" | "depositpaid"> = {
+  additionalneeds: "Breakfast",
+  depositpaid: true,
+};
 
 /* ============================================================
    ✅ GENERATOR
@@ -34,22 +34,18 @@ const baseBooking: Pick<Booking, 'additionalneeds' | 'depositpaid'> = {
    - Ensures valid date ranges
 ============================================================ */
 
-export const generateBooking = (
-  overrides: Partial<Booking> = {}
-): Booking => {
-
+export const generateBooking = (overrides: Partial<Booking> = {}): Booking => {
   // ✅ realistic future check-in (next 30 days)
-  const checkinDate = faker.date.soon({ days: 30 })
+  const checkinDate = faker.date.soon({ days: 30 });
 
   // ✅ checkout always AFTER checkin
-  const checkoutDate = new Date(checkinDate)
+  const checkoutDate = new Date(checkinDate);
   checkoutDate.setDate(
-    checkinDate.getDate() + faker.number.int({ min: 1, max: 10 })
-  )
+    checkinDate.getDate() + faker.number.int({ min: 1, max: 10 }),
+  );
 
   // ✅ format to yyyy-mm-dd
-  const formatDate = (date: Date) =>
-    date.toISOString().split('T')[0]
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
   return {
     firstname: faker.person.firstName(),
@@ -62,12 +58,12 @@ export const generateBooking = (
     bookingdates: {
       checkin: formatDate(checkinDate),
       checkout: formatDate(checkoutDate),
-      ...(overrides.bookingdates || {})
+      ...(overrides.bookingdates || {}),
     },
 
     ...baseBooking,
 
     // ✅ overrides applied LAST (highest priority)
-    ...overrides
-  }
-}
+    ...overrides,
+  };
+};

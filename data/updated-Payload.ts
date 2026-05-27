@@ -1,8 +1,7 @@
-import { generateBooking, Booking } from './booking-generator'
+import { generateBooking, Booking } from "./booking-generator";
 
 export const getDynamicUpdatePayload = (): Partial<Booking> => {
-
-  const data = generateBooking()
+  const data = generateBooking();
 
   const update: Partial<Booking> = {
     firstname: data.firstname,
@@ -15,17 +14,17 @@ export const getDynamicUpdatePayload = (): Partial<Booking> => {
     ...(Math.random() > 0.5 && {
       bookingdates: {
         checkin: data.bookingdates.checkin,
-        checkout: data.bookingdates.checkout
-      }
+        checkout: data.bookingdates.checkout,
+      },
     }),
 
-    depositpaid: Math.random() > 0.5
-  }
+    depositpaid: Math.random() > 0.5,
+  };
 
   // ✅ ensure at least one field exists
   if (Object.keys(update).length === 0) {
-    update.firstname = data.firstname
+    update.firstname = data.firstname;
   }
 
-  return update
-}
+  return update;
+};

@@ -1,31 +1,34 @@
-import { test as base } from '@playwright/test'
-import { apiRequest as apiRequestFunction } from './api-request'
+import { test as base } from "@playwright/test";
+import { apiRequest as apiRequestFunction } from "./api-request";
 import type {
   ApiRequestParams,
   OperationShape,
-  OperationRequestParams
-} from './api-request'
-import type { EnhancedApiPromise } from '../api-request/schema-validation/internal/promise-extension'
-import { capturePageContext, clearPageContext } from '../../src/internal/page-context'
+  OperationRequestParams,
+} from "./api-request";
+import type { EnhancedApiPromise } from "../api-request/schema-validation/internal/promise-extension";
+import {
+  capturePageContext,
+  clearPageContext,
+} from "../../src/internal/page-context";
 
 /**
  * Type for the apiRequest fixture parameters - exactly like ApiRequestParams but without the 'request' property
  * which is handled internally by the fixture.
  */
-export type ApiRequestFixtureParams = Omit<ApiRequestParams, 'request'>
+export type ApiRequestFixtureParams = Omit<ApiRequestParams, "request">;
 
 /** Operation fixture params — like OperationRequestParams but without 'request' (injected by fixture) */
 export type OperationRequestFixtureParams<Op extends OperationShape> = Omit<
   OperationRequestParams<Op>,
-  'request'
->
+  "request"
+>;
 
 type ApiRequestFixtureFn = {
   <Op extends OperationShape>(
-    params: OperationRequestFixtureParams<Op>
-  ): EnhancedApiPromise<Op['response']>
-  <T = unknown>(params: ApiRequestFixtureParams): EnhancedApiPromise<T>
-}
+    params: OperationRequestFixtureParams<Op>,
+  ): EnhancedApiPromise<Op["response"]>;
+  <T = unknown>(params: ApiRequestFixtureParams): EnhancedApiPromise<T>;
+};
 
 export const test = base.extend<{
   /**
@@ -64,16 +67,16 @@ export const test = base.extend<{
    *   // body is typed as the operation's response type
    * });
    */
-  apiRequest: ApiRequestFixtureFn
+  apiRequest: ApiRequestFixtureFn;
 }>({
   apiRequest: async ({ request, baseURL, page }, use) => {
     // Capture page context for plain function UI display support
-    capturePageContext(page)
+    capturePageContext(page);
 
     const apiRequest: ApiRequestFixtureFn = ((
       params:
         | ApiRequestFixtureParams
-        | OperationRequestFixtureParams<OperationShape>
+        | OperationRequestFixtureParams<OperationShape>,
     ) => {
       return apiRequestFunction({
         ...params,
@@ -82,13 +85,13 @@ export const test = base.extend<{
           (params as ApiRequestFixtureParams).configBaseUrl ?? baseURL,
         body: (params as ApiRequestFixtureParams).body ?? null,
         uiMode: params.uiMode ?? false,
-        page
-      } as ApiRequestParams)
-    }) as ApiRequestFixtureFn
+        page,
+      } as ApiRequestParams);
+    }) as ApiRequestFixtureFn;
 
-    await use(apiRequest)
+    await use(apiRequest);
 
     // Clear page context to avoid stale references between tests
-    clearPageContext()
-  }
-})
+    clearPageContext();
+  },
+});

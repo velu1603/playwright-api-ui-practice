@@ -1,8 +1,13 @@
-import { generateBooking } from "../data/booking-generator"
-import { Booking } from "../data/booking-types"
-import { bookingFactory } from "../data/booking-factory"
-import { bookingDetailsSchema,createBookingSchema,getAllBookingsSchema }   from '../schema/booking.schema'
-import { apiContracts } from "./apiContracts"
+import { generateBooking } from "../data/booking-generator";
+import { Booking } from "../data/booking-types";
+import { bookingFactory } from "../data/booking-factory";
+import {
+  bookingDetailsSchema,
+  createBookingSchema,
+  getAllBookingsSchema,
+} from "../schema/booking.schema";
+import { apiContracts } from "./apiContracts";
+import {jsonHeaders} from '../api/config/headers'
 
 /* Overrides allow partial customization of generated test data, enabling 
    flexible and reusable test scenarios without duplicating full payload definitions.
@@ -17,103 +22,92 @@ import { apiContracts } from "./apiContracts"
 
 export const createBooking = async (
   apiClient: any,
-  overrides: Partial<Booking> = {}
+  overrides: Partial<Booking> = {},
 ) => {
-
   const data = Object.keys(overrides).length
     ? bookingFactory.standard(overrides)
-    : generateBooking()
+    : generateBooking();
 
   const resp = await apiClient({
-    method: 'POST',
-    path: '/booking',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
+    method: "POST",
+    path: "/booking",
+    headers: jsonHeaders,
     uiMode: true,
     testStep: true,
-    body: data
-  }).validateSchema(apiContracts.createBooking)
+    body: data,
+  }).validateSchema(apiContracts.createBooking);
 
-  return resp
-}
+  return resp;
+};
 
 export const getAllBookings = async (apiClient: any) => {
   const resp = await apiClient({
-    method: 'GET',
+    method: "GET",
     path: `/booking`,
-    uiMode:true,
-    testStep:true,
-  }).validateSchema(apiContracts.getAllBooking)
-  
+    uiMode: true,
+    testStep: true,
+  }).validateSchema(apiContracts.getAllBooking);
 
-  return resp
-}
+  return resp;
+};
 
 export const getBooking = async (apiClient: any, id: number) => {
   const resp = await apiClient({
-    method: 'GET',
+    method: "GET",
     path: `/booking/${id}`,
-    uiMode:true,
-    testStep:true,
-  }).validateSchema(apiContracts.getBooking)  //bookingDetailsSchema
-  
+    uiMode: true,
+    testStep: true,
+  }).validateSchema(apiContracts.getBooking); //bookingDetailsSchema
 
-  return resp
-}
-
+  return resp;
+};
 
 export const deleteBooking = async (apiClient: any, id: number) => {
   const resp = await apiClient({
-    method: 'DELETE',
+    method: "DELETE",
     path: `/booking/${id}`,
-    authType: 'cookie',
+    authType: "cookie",
     //authType: 'basic',
 
-    uiMode:true,
-    testStep:true,
-  })
+    uiMode: true,
+    testStep: true,
+  });
 
-  return resp
-}
+  return resp;
+};
 
 export const updateBooking = async (
   apiClient: any,
   id: number,
-  updateData: Partial<Booking>
+  updateData: Partial<Booking>,
 ) => {
-
-  const existingResp  = await getBooking(apiClient, id)
-  const existing = existingResp.body
+  const existingResp = await getBooking(apiClient, id);
+  const existing = existingResp.body;
 
   const updatedBody = {
     ...existing,
     ...updateData,
     bookingdates: {
       ...existing.bookingdates,
-      ...(updateData.bookingdates || {})
-    }
-  }
+      ...(updateData.bookingdates || {}),
+    },
+  };
 
   const resp = await apiClient({
-    method: 'PUT',
+    method: "PUT",
     path: `/booking/${id}`,
-    authType: 'basic',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    authType: "basic",
+    headers: jsonHeaders,
     uiMode: true,
     testStep: true,
     body: updatedBody,
-  }).validateSchema(apiContracts.updateBooking)  // bookingDetailsSchema
+  }).validateSchema(apiContracts.updateBooking); // bookingDetailsSchema
 
-  return resp
-}
-export { bookingDetailsSchema }
+  return resp;
+};
+export { bookingDetailsSchema };
 
-// Future enhancements: also see apiContracts.ts for documentations 
+// Future enhancements: also see apiContracts.ts for documentations
 
 // export const apiClientWithContracts = (apiClient: any) => ({
 

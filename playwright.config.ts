@@ -58,7 +58,7 @@ export default defineConfig({
       
     },
  {
-      name: 'api',
+      name: 'API-testing',
       use: {
         baseURL: API_BASE_URL,
       },

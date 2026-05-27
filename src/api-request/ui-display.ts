@@ -4,40 +4,40 @@
  * Adapted from pw-api-plugin to provide rich visual feedback in Playwright UI
  */
 
-import { test, type Page } from '@playwright/test'
-import { getLogger } from '../../utils/logger'
+import { test, type Page } from "@playwright/test";
+import { getLogger } from "../../utils/logger";
 
 /** Request data interface for UI display */
 export interface RequestDataInterface {
-  url: string
-  method: string
-  headers?: object
-  data?: any
-  params?: object
-  otherOptions?: object
+  url: string;
+  method: string;
+  headers?: object;
+  data?: any;
+  params?: object;
+  otherOptions?: object;
   validationInfo?: {
-    schemaFormat: string
-    validationTime: number
-    success: boolean
-    errorCount: number
-  }
+    schemaFormat: string;
+    validationTime: number;
+    success: boolean;
+    errorCount: number;
+  };
 }
 
 /** Response data interface for UI display */
 export interface ResponseDataInterface {
-  status: number
-  statusClass: string
-  statusText: string
-  headers?: object
-  body?: any
-  duration?: number
+  status: number;
+  statusClass: string;
+  statusText: string;
+  headers?: object;
+  body?: any;
+  duration?: number;
   validationResult?: {
-    icon: '✅' | '❌'
-    summary: string
-    schemaInfo: string
-    errors?: string[]
-    schema?: object
-  }
+    icon: "✅" | "❌";
+    summary: string;
+    schemaInfo: string;
+    errors?: string[];
+    schema?: object;
+  };
 }
 
 /**
@@ -48,72 +48,73 @@ export const addApiCardToUI = async (
   requestData: RequestDataInterface,
   responseData: ResponseDataInterface,
   page?: Page,
-  uiMode?: boolean
+  uiMode?: boolean,
 ): Promise<void> => {
   // Only show UI if we have a page and UI mode is enabled (either via parameter or environment variable)
-  const shouldShowUI = page && (uiMode || shouldDisplayApiUI())
+  const shouldShowUI = page && (uiMode || shouldDisplayApiUI());
 
-  if (!shouldShowUI) return
+  if (!shouldShowUI) return;
 
   try {
-    const apiCallHtml = await createApiCallHtml(requestData, responseData)
-    const html = await createPageHtml(apiCallHtml)
+    const apiCallHtml = await createApiCallHtml(requestData, responseData);
+    const html = await createPageHtml(apiCallHtml);
 
     // Open validation results in a new tab if this is a validation request
     if (requestData.validationInfo) {
-      const { schemaFormat = 'Unknown', success } = requestData.validationInfo
-      const statusIcon = success ? '✅' : '❌'
-      const stepName = `${statusIcon} Schema Validation (${schemaFormat})`
+      const { schemaFormat = "Unknown", success } = requestData.validationInfo;
+      const statusIcon = success ? "✅" : "❌";
+      const stepName = `${statusIcon} Schema Validation (${schemaFormat})`;
 
       await test.step(stepName, async () => {
-        const newPage = await page.context().newPage()
-        await newPage.setContent(html)
-        await newPage.bringToFront()
-      })
+        const newPage = await page.context().newPage();
+        await newPage.setContent(html);
+        await newPage.bringToFront();
+      });
     } else {
       // For non-validation requests, use the original behavior
-      await page.setContent(html)
+      await page.setContent(html);
     }
 
     // Also attach as test report since UI mode is enabled
-    const method = requestData.method.toUpperCase()
+    const method = requestData.method.toUpperCase();
     await test.info().attach(`API request - ${method} - ${requestData.url}`, {
       body: await createApiCallReportAttachment(apiCallHtml),
-      contentType: 'text/html'
-    })
+      contentType: "text/html",
+    });
   } catch (error) {
-    await getLogger().warning(`Failed to display API UI: ${error}`)
+    await getLogger().warning(`Failed to display API UI: ${error}`);
   }
-}
+};
 
 /**
  * Determines if API UI should be displayed based on environment variables
  */
 const shouldDisplayApiUI = (): boolean => {
   // One environment variable to rule them all
-  const envUiMode = process.env.API_E2E_UI_MODE
-  if (envUiMode === 'true') return true
-  if (envUiMode === 'false') return false
+  const envUiMode = process.env.API_E2E_UI_MODE;
+  if (envUiMode === "true") return true;
+  if (envUiMode === "false") return false;
 
   // Default is false unless explicitly enabled
-  return false
-}
+  return false;
+};
 
 /**
  * Generates an HTML representation of an API call
  */
 const createApiCallHtml = async (
   requestData: RequestDataInterface,
-  responseData: ResponseDataInterface
+  responseData: ResponseDataInterface,
 ): Promise<string> => {
-  const callId = Math.floor(10000000 + Math.random() * 90000000)
-  
-// ✅ NEW: Clean schema display
-  const schemaDisplay =
-    responseData.validationResult?.schemaInfo?.includes('zod')
-      ? '✅ Zod schema validated successfully'
-      : formatJson(responseData.validationResult?.schema ?? {})
-      
+  const callId = Math.floor(10000000 + Math.random() * 90000000);
+
+  // ✅ NEW: Clean schema display
+  const schemaDisplay = responseData.validationResult?.schemaInfo?.includes(
+    "zod",
+  )
+    ? "✅ Zod schema validated successfully"
+    : formatJson(responseData.validationResult?.schema ?? {});
+
   // Add validation results section if present
   const validationSection = responseData.validationResult
     ? `
@@ -133,19 +134,19 @@ const createApiCallHtml = async (
                             ? `<div style="color: #d00;">
                                 <strong>❌ Validation Failed - ${responseData.validationResult.errors.length} error(s):</strong>
                                 <ul style="margin: 10px 0; padding-left: 20px;">
-                                    ${responseData.validationResult.errors.map((err) => `<li>${err}</li>`).join('')}
+                                    ${responseData.validationResult.errors.map((err) => `<li>${err}</li>`).join("")}
                                 </ul>
                               </div>`
                             : '<span style="color: #0d0; font-weight: bold;">PASS ✅ All validations passed successfully</span>',
-                          'VALIDATION RESULT',
+                          "VALIDATION RESULT",
                           callId,
-                          true
+                          true,
                         )}
                         ${await createValidationTab(
                           //formatJson(responseData.validationResult.schema),
                           schemaDisplay,
-                          'SCHEMA',
-                          callId
+                          "SCHEMA",
+                          callId,
                         )}
                     </div>
                   `
@@ -156,7 +157,7 @@ const createApiCallHtml = async (
                       <label class="property">Validation Errors:</label>
                       <div class="pw-validation-errors" style="background: #ffe6e6; border-left: 4px solid #ff0000; padding: 10px; margin-top: 10px;">
                           <ul style="margin: 0; padding-left: 20px;">
-                              ${responseData.validationResult.errors.map((err) => `<li style="color: #d00;">${err}</li>`).join('')}
+                              ${responseData.validationResult.errors.map((err) => `<li style="color: #d00;">${err}</li>`).join("")}
                           </ul>
                       </div>
                     `
@@ -164,31 +165,31 @@ const createApiCallHtml = async (
             }
         </div>
       `
-    : ''
+    : "";
 
   return `<div class="pw-api-call pw-card">
         ${await createApiCallHtmlRequest(requestData, callId)}
         <hr>
         ${await createApiCallHtmlResponse(responseData, callId)}
         ${validationSection}
-    </div>`
-}
+    </div>`;
+};
 
 /**
  * Generates HTML for the request section
  */
 const createApiCallHtmlRequest = async (
   requestData: RequestDataInterface,
-  callId: number
+  callId: number,
 ): Promise<string> => {
-  const { url, method, headers, data, params, otherOptions } = requestData
+  const { url, method, headers, data, params, otherOptions } = requestData;
 
-  const requestHeaders = headers ? formatJson(headers) : undefined
-  const requestBody = data ? formatJson(data) : undefined
-  const requestParams = params ? formatJson(params) : undefined
+  const requestHeaders = headers ? formatJson(headers) : undefined;
+  const requestBody = data ? formatJson(data) : undefined;
+  const requestParams = params ? formatJson(params) : undefined;
   const requestOtherOptions = otherOptions
     ? formatJson(otherOptions)
-    : undefined
+    : undefined;
 
   return `<div class="pw-api-request">
         <label class="title">REQUEST - </label>
@@ -198,13 +199,13 @@ const createApiCallHtmlRequest = async (
         <label class="property">URL</label>
         <pre class="hljs pw-api-hljs">${url}</pre>
         <div class="pw-req-data-tabs-${callId} pw-data-tabs">
-            ${await createRequestTab(requestBody, 'BODY', callId, true)}
-            ${await createRequestTab(requestHeaders, 'HEADERS', callId)}
-            ${await createRequestTab(requestParams, 'PARAMS', callId)}
-            ${await createRequestTab(requestOtherOptions, 'OTHER OPTIONS', callId)}
+            ${await createRequestTab(requestBody, "BODY", callId, true)}
+            ${await createRequestTab(requestHeaders, "HEADERS", callId)}
+            ${await createRequestTab(requestParams, "PARAMS", callId)}
+            ${await createRequestTab(requestOtherOptions, "OTHER OPTIONS", callId)}
         </div>
-    </div>`
-}
+    </div>`;
+};
 
 /**
  * Creates HTML for a request tab
@@ -213,36 +214,36 @@ const createRequestTab = async (
   data: any,
   tabLabel: string,
   callId: number,
-  checked?: boolean
+  checked?: boolean,
 ): Promise<string> => {
-  if (data === undefined) return ''
+  if (data === undefined) return "";
 
-  const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, '-')
+  const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, "-");
   return `<input type="radio" name="pw-req-data-tabs-${callId}" id="pw-req-${tabLabelForId}-${callId}" ${
-    checked ? 'checked="checked"' : ''
+    checked ? 'checked="checked"' : ""
   }>
         <label for="pw-req-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
         <div class="pw-tab-content">
            <pre class="hljs" id="req-${tabLabelForId}-${callId}" data-tab-type="req-${tabLabelForId}">${data}</pre>
-        </div>`
-}
+        </div>`;
+};
 
 /**
  * Generates HTML for the response section
  */
 const createApiCallHtmlResponse = async (
   responseData: ResponseDataInterface,
-  callId: number
+  callId: number,
 ): Promise<string> => {
   const { status, statusClass, statusText, headers, body, duration } =
-    responseData
+    responseData;
 
-  const responseHeaders = headers ? formatJson(headers) : undefined
-  const responseBody = body ? formatJson(body) : undefined
+  const responseHeaders = headers ? formatJson(headers) : undefined;
+  const responseBody = body ? formatJson(body) : undefined;
   const durationMsg = duration
-    ? 'Duration approx. ' +
+    ? "Duration approx. " +
       (duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(2)}s`)
-    : ''
+    : "";
 
   return `<div class="pw-api-response">
         <label class="title">RESPONSE - </label>
@@ -250,11 +251,11 @@ const createApiCallHtmlResponse = async (
         <label class="title-property"> - ${durationMsg}</label>
         <br>
         <div class="pw-res-data-tabs-${callId} pw-data-tabs">
-            ${await createResponseTab(responseBody, 'BODY', callId, true)}
-            ${await createResponseTab(responseHeaders, 'HEADERS', callId)}
+            ${await createResponseTab(responseBody, "BODY", callId, true)}
+            ${await createResponseTab(responseHeaders, "HEADERS", callId)}
          </div>
-    </div>`
-}
+    </div>`;
+};
 
 /**
  * Creates HTML for a response tab
@@ -263,19 +264,19 @@ const createResponseTab = async (
   data: any,
   tabLabel: string,
   callId: number,
-  checked?: boolean
+  checked?: boolean,
 ): Promise<string> => {
-  if (data === undefined) return ''
+  if (data === undefined) return "";
 
-  const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, '-')
+  const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, "-");
   return `<input type="radio" name="pw-res-data-tabs-${callId}" id="pw-res-${tabLabelForId}-${callId}" ${
-    checked ? 'checked="checked"' : ''
+    checked ? 'checked="checked"' : ""
   }>
         <label for="pw-res-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
         <div class="pw-tab-content">
             <pre class="hljs" id="res-${tabLabelForId}-${callId}" data-tab-type="res-${tabLabelForId}">${data}</pre>
-        </div>`
-}
+        </div>`;
+};
 
 /**
  * Creates HTML for a validation tab
@@ -284,19 +285,19 @@ const createValidationTab = async (
   data: any,
   tabLabel: string,
   callId: number,
-  checked?: boolean
+  checked?: boolean,
 ): Promise<string> => {
-  if (data === undefined) return ''
+  if (data === undefined) return "";
 
-  const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, '-')
+  const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, "-");
   return `<input type="radio" name="pw-val-data-tabs-${callId}" id="pw-val-${tabLabelForId}-${callId}" ${
-    checked ? 'checked="checked"' : ''
+    checked ? 'checked="checked"' : ""
   }>
         <label for="pw-val-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
         <div class="pw-tab-content">
             <pre class="hljs" id="val-${tabLabelForId}-${callId}" data-tab-type="val-${tabLabelForId}">${data}</pre>
-        </div>`
-}
+        </div>`;
+};
 
 /**
  * Creates a complete HTML page for API call display
@@ -313,14 +314,14 @@ const createPageHtml = async (apiCallHtml: string): Promise<string> => {
         <body>
             <div class="pw-api-container">${apiCallHtml}</div>
         </body>
-    </html>`
-}
+    </html>`;
+};
 
 /**
  * Creates HTML for API call report attachment
  */
 const createApiCallReportAttachment = async (
-  apiCallHtml: string
+  apiCallHtml: string,
 ): Promise<string> => {
   return `<html>
         <head>
@@ -331,39 +332,42 @@ const createApiCallReportAttachment = async (
         <body>
             ${apiCallHtml}
         </body>
-    </html>`
-}
+    </html>`;
+};
 
 /**
  * Formats a JSON object for display with basic highlighting
  */
 const formatJson = (jsonObject: object): string => {
   try {
-    const jsonString = JSON.stringify(jsonObject, null, 4)
+    const jsonString = JSON.stringify(jsonObject, null, 4);
     // First escape HTML entities to prevent XSS
     const escapedString = jsonString
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 
     // Then apply syntax highlighting
     return escapedString
       .replace(/&quot;([^&]+)&quot;:/g, '<span class="json-key">"$1":</span>')
       .replace(
         /: &quot;([^&]+)&quot;/g,
-        ': <span class="json-string">"$1"</span>'
+        ': <span class="json-string">"$1"</span>',
       )
       .replace(/: (\d+)/g, ': <span class="json-number">$1</span>')
-      .replace(/: (true|false|null)/g, ': <span class="json-literal">$1</span>')
+      .replace(
+        /: (true|false|null)/g,
+        ': <span class="json-literal">$1</span>',
+      );
   } catch {
     return String(jsonObject)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
-}
+};
 
 /**
  * Inline CSS styles for the API display
@@ -494,4 +498,4 @@ const inlineStyles = `<style>
         background: rgb(229, 231, 235);
         margin: 20px 0;
     }
-</style>`
+</style>`;
