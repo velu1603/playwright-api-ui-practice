@@ -60,12 +60,17 @@ const getAuthToken = async (request: any): Promise<string> => {
     return cachedToken
   }
 
+  if (!process.env.API_USERNAME || !process.env.API_PASSWORD) {
+  throw new Error('Missing API credentials (API_USERNAME/API_PASSWORD)')
+}
   const res = await apiRequest<{ token: string }>({
     request,
     configBaseUrl: process.env.API_BASE_URL,
     method: 'POST',
     path: '/auth',
-    headers: {"Content-Type": "application/json",},
+    headers: {"Content-Type": "application/json",
+      "Accept": "application/json"
+    },
     body: {
       username: process.env.API_USERNAME?.trim(),
       password: process.env.API_PASSWORD?.trim()
@@ -73,10 +78,14 @@ const getAuthToken = async (request: any): Promise<string> => {
   })
 
   
+
+
+
+  
 console.log('Auth Debug:', {
   url: process.env.API_BASE_URL + '/auth',
-  username: process.env.USERNAME,
-  passwordLength: process.env.PASSWORD?.length
+  username: process.env.API_USERNAME?.length,
+  passwordLength: process.env.API_PASSWORD?.length
 })
 
 
