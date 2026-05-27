@@ -65,7 +65,7 @@ const getAuthToken = async (request: any): Promise<string> => {
     configBaseUrl: process.env.API_BASE_URL,
     method: 'POST',
     path: '/auth',
-    headers: {"Content-type": "application/json",},
+    headers: {"Content-Type": "application/json",},
     body: {
       username: process.env.API_USERNAME?.trim(),
       password: process.env.API_PASSWORD?.trim()
