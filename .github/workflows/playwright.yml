@@ -37,6 +37,9 @@ jobs:
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
+          USERNAME: ${{ secrets.USERNAME }} 
+          PASSWORD: ${{ secrets.PASSWORD }} 
+
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4

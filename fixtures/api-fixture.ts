@@ -74,7 +74,7 @@ const getAuthToken = async (request: any): Promise<string> => {
   const token = res.body?.token
 
   if (!token) {
-    throw new Error('Auth token not generated')
+    throw new Error(`Auth token not generated. Response is ${JSON.stringify(res.body)}`)
   }
 
   cachedToken = token
