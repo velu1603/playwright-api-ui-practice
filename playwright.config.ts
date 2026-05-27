@@ -29,9 +29,12 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'playwright-report/results.json' }],
-    ['list']
+    ['dot'],
+    ['html', { /*outputFolder: 'playwright-report'*/ title:'Restful Booker API testing', open:'never' }],
+    //['json', { /*outputFile: 'playwright-report/results.json' */ }],
+    ['list', {printSteps: false}],
+    ['allure-playwright'],
+    ['monocart-reporter', {name: 'Test Report', outputFile: './monocart-report/index.html'}]
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
