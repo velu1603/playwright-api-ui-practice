@@ -65,11 +65,21 @@ const getAuthToken = async (request: any): Promise<string> => {
     configBaseUrl: process.env.API_BASE_URL,
     method: 'POST',
     path: '/auth',
+    headers: {"Content-type": "application/json",},
     body: {
-      username: process.env.API_USERNAME,
-      password: process.env.API_PASSWORD
+      username: process.env.API_USERNAME?.trim(),
+      password: process.env.API_PASSWORD?.trim()
     }
   })
+
+  
+console.log('Auth Debug:', {
+  url: process.env.API_BASE_URL + '/auth',
+  username: process.env.USERNAME,
+  passwordLength: process.env.PASSWORD?.length
+})
+
+
 
   const token = res.body?.token
 
