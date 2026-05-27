@@ -49,7 +49,7 @@ jobs:
       - name: Run Playwright tests
         run: npx playwright test --project=${{ matrix.project }} --reporter=dot
         env:
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_BASE_URL: https://automationintesting.online
           UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
           API_USERNAME: ${{ secrets.API_USERNAME }}
           API_PASSWORD: ${{ secrets.API_PASSWORD }}
