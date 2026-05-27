@@ -50,11 +50,11 @@ jobs:
         run: npx playwright test --project=${{ matrix.project }} --reporter=dot
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
-          UI_BASE_URL: https://automationintesting.online
+          UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
           API_USERNAME: ${{ secrets.API_USERNAME }}
           API_PASSWORD: ${{ secrets.API_PASSWORD }}
 
-      # ✅ Upload raw Allure results for each matrix run
+      # ✅ Upload Allure raw results (VERY IMPORTANT)
       - name: Upload Allure Results
         uses: actions/upload-artifact@v4
         if: always()
@@ -64,7 +64,7 @@ jobs:
           retention-days: 7
 
   # ==========================================================
-  # ✅ JOB 2: MERGE + GENERATE + DEPLOY ALLURE REPORT
+  # ✅ JOB 2: MERGE + GENERATE + DEPLOY REPORT
   # ==========================================================
   deploy-report:
     needs: test
@@ -82,24 +82,28 @@ jobs:
       - name: Install Allure CLI
         run: npm install -g allure-commandline
 
-      # ✅ Download all matrix artifacts
+      # ✅ Download ALL artifacts from matrix jobs
       - name: Download Allure Results
         uses: actions/download-artifact@v4
         with:
           path: combined-results
 
-      # ✅ Merge all results into one folder
+      # ✅ Debug (optional but useful)
+      - name: List downloaded files
+        run: ls -R combined-results || true
+
+      # ✅ Merge Allure results safely
       - name: Merge Allure Results
         run: |
           mkdir merged-results
-          find combined-results -type f -name '*.json' -exec cp {} merged-results \;
+          find combined-results -type f -name '*.json' -exec cp {} merged-results \; || true
 
-      # ✅ Generate Allure HTML report
+      # ✅ Generate Allure report
       - name: Generate Allure Report
         run: |
           allure generate merged-results --clean -o allure-report
 
-      # ✅ Upload Pages artifact (ONLY ONCE)
+      # ✅ Upload report once (IMPORTANT)
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
