@@ -1,8 +1,19 @@
 import { generateBooking } from "../data/booking-generator"
 import { Booking } from "../data/booking-types"
 import { bookingFactory } from "../data/booking-factory"
-import { bookingSchema }                          from '../schema/booking.schema'
+import { bookingDetailsSchema,createBookingSchema,getAllBookingsSchema }   from '../schema/booking.schema'
+import { apiContracts } from "./apiContracts"
 
+/* Overrides allow partial customization of generated test data, enabling 
+   flexible and reusable test scenarios without duplicating full payload definitions.
+
+   Summary 
+    | concept            | Meaning |
+    | Partial<Booking>   | optional fields ✅
+    |overrides           | test-specific changes ✅
+    |factory + overrides | merged data ✅
+    |benefit             | flexible + clean tests ✅
+*/
 
 export const createBooking = async (
   apiClient: any,
@@ -23,7 +34,19 @@ export const createBooking = async (
     uiMode: true,
     testStep: true,
     body: data
-  }).validateSchema(bookingSchema)
+  }).validateSchema(apiContracts.createBooking)
+
+  return resp
+}
+
+export const getAllBookings = async (apiClient: any) => {
+  const resp = await apiClient({
+    method: 'GET',
+    path: `/booking`,
+    uiMode:true,
+    testStep:true,
+  }).validateSchema(apiContracts.getAllBooking)
+  
 
   return resp
 }
@@ -34,10 +57,10 @@ export const getBooking = async (apiClient: any, id: number) => {
     path: `/booking/${id}`,
     uiMode:true,
     testStep:true,
-  })
+  }).validateSchema(apiContracts.getBooking)  //bookingDetailsSchema
   
 
-  return resp.body
+  return resp
 }
 
 
@@ -61,7 +84,8 @@ export const updateBooking = async (
   updateData: Partial<Booking>
 ) => {
 
-  const existing = await getBooking(apiClient, id)
+  const existingResp  = await getBooking(apiClient, id)
+  const existing = existingResp.body
 
   const updatedBody = {
     ...existing,
@@ -83,7 +107,75 @@ export const updateBooking = async (
     uiMode: true,
     testStep: true,
     body: updatedBody,
-  })
+  }).validateSchema(apiContracts.updateBooking)  // bookingDetailsSchema
 
   return resp
 }
+export { bookingDetailsSchema }
+
+// Future enhancements: also see apiContracts.ts for documentations 
+
+// export const apiClientWithContracts = (apiClient: any) => ({
+
+//   async getAllBookings() {
+//     return apiClient({
+//       method: 'GET',
+//       path: '/booking'
+//     }).validateSchema(apiContracts.getAllBookings)
+//   },
+
+//   async createBooking(data: Booking) {
+//     return apiClient({
+//       method: 'POST',
+//       path: '/booking',
+//       body: data,
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Accept': 'application/json'
+//       }
+//     }).validateSchema(apiContracts.createBooking)
+//   },
+
+//   async getBooking(id: number) {
+//     return apiClient({
+//       method: 'GET',
+//       path: `/booking/${id}`
+//     }).validateSchema(apiContracts.getBooking)
+//   }
+
+// })
+
+// test('Create and Get booking (clean)', async ({ apiClient }) => {
+
+//   Example: full flow test
+
+//   const api = apiClientWithContracts(apiClient)
+
+//   const created = await api.createBooking({
+//     firstname: 'John',
+//     lastname: 'Doe',
+//     totalprice: 100,
+//     depositpaid: true,
+//     bookingdates: {
+//       checkin: '2026-06-01',
+//       checkout: '2026-06-05'
+//     }
+//   })
+
+//   const fetched = await api.getBooking(created.body.bookingid)
+
+//   expect(fetched.body).toMatchObject(created.body.booking)
+// })
+
+//  Move into fixture
+//You can inject this automatically 👇
+
+//  Update your Playwright fixture
+//  export const test = base.extend<{
+//   api: ReturnType<typeof apiClientWithContracts>
+// }>({
+//   api: async ({ apiClient }, use) => {
+//     const api = apiClientWithContracts(apiClient)
+//     await use(api)
+//   }
+// })

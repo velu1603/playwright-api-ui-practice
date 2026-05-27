@@ -11,4 +11,3 @@ export type Booking = {
   bookingdates: BookingDates
   additionalneeds: string
 }
-``

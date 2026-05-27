@@ -21,6 +21,10 @@ function shouldDisplayValidationUI(): boolean {
   return process.env.API_E2E_UI_MODE === 'true'
 }
 
+function isRecord(value: unknown): value is Record<string, undefined>{
+  return typeof value === 'object' && value != null && !Array.isArray(value)
+}
+
 /** Display validation results in UI for plain function usage */
 async function displayValidationUI(
   validationResult: ValidationResult
@@ -141,11 +145,17 @@ export async function validateSchema(
 
     const validationTime = Date.now() - startTime
 
+    const safeSchema = schemaFormat && isRecord(schemaForResult)
+                      ? schemaForResult
+                      : undefined
+
+
+
     const result = buildValidationResult(
       validationErrors,
       schemaFormat,
       validationTime,
-      schemaForResult
+      safeSchema
     )
 
     // Display UI if enabled (via option or environment variable)

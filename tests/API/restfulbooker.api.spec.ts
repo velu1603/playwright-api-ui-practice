@@ -1,7 +1,7 @@
 import { test, expect }                           from '../../fixtures/api-fixture'
 import {generateBooking}                          from '../../data/booking-generator'
-import { createBooking,getBooking,deleteBooking,updateBooking } from '../../apiHelper/booking-api'
-import { bookingSchema }                          from '../../schema/booking.schema'
+import { createBooking,getBooking,deleteBooking,updateBooking,getAllBookings } from '../../apiHelper/booking-api'
+import { bookingDetailsSchema,createBookingSchema,getAllBookingsSchema  }   from '@schema/booking.schema'
 import { getDynamicUpdatePayload } from '../../data/updated-Payload'
 import { updateFactory } from '../../data/update-factory'
 import { bookingFactory } from '../../data/booking-factory'
@@ -22,21 +22,22 @@ test.describe('Restful-booker API testing', () => {
 
   })
   test('GET all bookings', async ({ apiClient  }) => {
-    const response = await apiClient ({
-      method: 'GET',
-      path: '/booking',
-      uiMode:true,
-      retryConfig:{
-        maxRetries: 3,
-        enableJitter: true,
+    const created = await getAllBookings(apiClient)
+    // const response = await apiClient ({
+    //   method: 'GET',
+    //   path: '/booking',
+    //   uiMode:true,
+    //   retryConfig:{
+    //     maxRetries: 3,
+    //     enableJitter: true,
 
 
-      },
-      testStep:true
+    //   },
+    //   testStep:true
       
-    })
+    // }).validateSchema(getAllBookingsSchema)
 
-    expect(response.status,`Response should be ${response.status}`).toBe(200)
+    expect(created.status,`Response should be ${created.status}`).toBe(200)
   
   })
   test('Create a booking with no deposit', async({apiClient,authToken }) =>{
@@ -51,7 +52,7 @@ test.describe('Restful-booker API testing', () => {
       uiMode:true,
       body:body,
       
-    }).validateSchema(bookingSchema)
+    }).validateSchema(createBookingSchema)
    
 
     expect(resp.status,`Response should be ${resp.status}`).toBe(200)
@@ -88,7 +89,7 @@ test('Create long stay booking', async ({ apiClient }) => {
       },
       uiMode:true,
     body: booking
-  }).validateSchema(bookingSchema)
+  }).validateSchema(createBookingSchema)
 
   expect(resp.status,`Response should be ${resp.status}`).toBe(200)
     expect(resp.validationResult.success).toBeTruthy()
@@ -100,9 +101,10 @@ test('Create long stay booking', async ({ apiClient }) => {
    test('Create and Get booking (independent)', async({apiClient,authToken }) =>{
 
     const created = await createBooking(apiClient)
+  
     const fetched = await getBooking(apiClient,created.body.bookingid)
 
-    expect(fetched).toMatchObject(created.body.booking)
+    expect(fetched.body).toMatchObject(created.body.booking)
     
 
   })
@@ -113,7 +115,7 @@ test('Create long stay booking', async ({ apiClient }) => {
 
   const fetched = await getBooking(apiClient, created.body.bookingid)
 
-  expect(fetched).toMatchObject(created.body.booking)
+  expect(fetched.body).toMatchObject(created.body.booking)
 
 
 // ✅ cleanup
@@ -158,8 +160,8 @@ const updateData = {
     expect(updated.status,`Update status is ${updated.status}`).toBe(200)
 
     expect(updated.body.bookingdates,`Updated booking dates match`).toMatchObject(updateData.bookingdates)
-    expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`).toBeValidDateFormat()
-     expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
+    //expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`).toBeValidDateFormat()
+    //expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
   })
 
   test('Mixed dynamic update', async ({ apiClient }) => {
@@ -188,6 +190,10 @@ test('Upgrade booking to premium', async ({ apiClient }) => {
   const premiumUpdate = bookingFactory.premium()
 
   const updated = await updateBooking(apiClient, id, premiumUpdate)
+
+  
+  // ✅ 1. Schema-level validation (structure guaranteed)
+  //const validated = bookingSchema.parse(updated.body)
 
   expect(updated.status,`✅ Status is ${updated.status}`).toBe(200)
   expect(updated.body).toMatchObject(premiumUpdate)

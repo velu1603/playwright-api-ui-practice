@@ -110,7 +110,7 @@ const createApiCallHtml = async (
   
 // ✅ NEW: Clean schema display
   const schemaDisplay =
-    responseData.validationResult?.schemaInfo?.includes('Zod')
+    responseData.validationResult?.schemaInfo?.includes('zod')
       ? '✅ Zod schema validated successfully'
       : formatJson(responseData.validationResult?.schema ?? {})
       
