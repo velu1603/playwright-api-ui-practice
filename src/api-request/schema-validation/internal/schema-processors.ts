@@ -11,6 +11,7 @@ import type { ValidationErrorDetail, SupportedSchema } from "../types";
 import { loadSchemaFromFile } from "./file-loader";
 import { extractOpenApiSchema } from "./openapi-handler";
 import { validateWithAnyOfSupport } from "../internal/validation-engine";
+import zodToJsonSchema from "zod-to-json-schema";
 
 /**
  * Common options for schema processing
@@ -360,11 +361,24 @@ class ZodSchemaProcessor implements SchemaProcessor {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const zodSchema = schema as any;
     const validationErrors = validateWithZodSchema(data, zodSchema);
+    let schemaForResult: object
+    
+    try {
+      schemaForResult = zodToJsonSchema(zodSchema,{
+        name: 'ZodSchema',
+        $refStrategy:'none'
+      })
+    }catch {
+      schemaForResult= {
+        type:'ZodSchema',
+        note:'Unable to convert Zod schema to Json schema'
+      }
+    }
 
     return {
       validationErrors,
       processedSchema: zodSchema,
-      schemaForResult: { type: "ZodSchema", shape: "See Zod definition" },
+      schemaForResult
     };
   }
 }
