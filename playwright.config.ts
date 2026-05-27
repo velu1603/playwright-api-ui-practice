@@ -41,7 +41,8 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('')`. */
     // baseURL: 'http://localhost:3000',
 
-     baseURL: UI_BASE_URL,
+     //baseURL: UI_BASE_URL,
+      
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -55,6 +56,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] ,
       baseURL: UI_BASE_URL,
       },
+      testMatch: /.*\.ui\.spec\.ts/
       
     },
  {
