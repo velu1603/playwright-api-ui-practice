@@ -30,11 +30,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Browsers
-        run: |
-          if [ "${{ matrix.project }}" = "ui-chromium" ]; then
-            npx playwright install chromium --with-deps
-          fi
-        # ✅ Only installs browser when needed
+        run: npx playwright install --with-deps
 
       - name: Run Playwright tests
         run: npx playwright test --project=${{ matrix.project }}
