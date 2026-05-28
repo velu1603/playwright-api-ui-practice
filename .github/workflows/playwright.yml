@@ -11,6 +11,11 @@ permissions:
   pages: write
   id-token: write
 
+# Deploy
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
   # ==========================================================
   # ✅ JOB 1: RUN TESTS (MATRIX)
@@ -31,29 +36,36 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: '20'
           cache: 'npm'
 
+      # ✅ Cache Playwright Browsers
       - name: Cache Playwright browsers
+        id: cache-playwright
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
       - name: Install dependencies
         run: npm ci
 
+      # ✅ Install browsers only if cache miss
       - name: Install Playwright browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
       - name: Run Playwright tests
-        run: npx playwright test --project=${{ matrix.project }}
+        run: npx playwright test --project=${{ matrix.project }} --retries=2
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           UI_BASE_URL: https://automationintesting.online
           API_USERNAME: ${{ secrets.API_USERNAME }}
           API_PASSWORD: ${{ secrets.API_PASSWORD }}
 
+      # ✅ Upload Allure Results
       - name: Upload Allure Results
         uses: actions/upload-artifact@v4
         if: always()
@@ -61,6 +73,14 @@ jobs:
           name: allure-results-${{ matrix.project }}
           path: allure-results
           retention-days: 7
+
+      # ✅ Upload Playwright HTML Report (debugging)
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report
 
   # ==========================================================
   # ✅ JOB 2: MERGE + GENERATE + DEPLOY REPORT
@@ -86,6 +106,13 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ✅ Ensure jq exists
+      - name: Install jq
+        run: sudo apt-get install -y jq
 
       - name: Install Allure CLI
         run: npm install -g allure-commandline
@@ -98,10 +125,17 @@ jobs:
       - name: List downloaded files
         run: ls -R combined-results || true
 
+      # ✅ Safe merge
       - name: Merge Allure Results
         run: |
-          mkdir merged-results
-          find combined-results -type f -name '*.json' -exec cp {} merged-results \; || true
+          mkdir -p merged-results
+          FILES=$(find combined-results -type f -name '*.json')
+
+          if [ -z "$FILES" ]; then
+            echo "No Allure result files found!"
+          else
+            find combined-results -type f -name '*.json' -exec cp {} merged-results \;
+          fi
 
       - name: Restore Allure History
         run: |
