@@ -77,20 +77,7 @@ const getAuthToken = async (request: any): Promise<string> => {
     }
   })
 
-  
-
-
-
-  
-console.log('Auth Debug:', {
-  url: process.env.API_BASE_URL + '/auth',
-  username: process.env.API_USERNAME?.length,
-  passwordLength: process.env.API_PASSWORD?.length
-})
-
-
-
-  const token = res.body?.token
+const token = res.body?.token
 
   if (!token) {
     throw new Error(`Auth token not generated. Response is ${JSON.stringify(res.body)}`)

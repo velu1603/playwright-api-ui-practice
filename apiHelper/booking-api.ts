@@ -9,6 +9,8 @@ import {
 import { apiContracts } from "./apiContracts";
 import {jsonHeaders} from '../api/config/headers'
 
+
+
 /* Overrides allow partial customization of generated test data, enabling 
    flexible and reusable test scenarios without duplicating full payload definitions.
 
@@ -66,8 +68,8 @@ export const deleteBooking = async (apiClient: any, id: number) => {
   const resp = await apiClient({
     method: "DELETE",
     path: `/booking/${id}`,
-    authType: "cookie",
-    //authType: 'basic',
+    //authType: "cookie",
+    authType: 'basic',
 
     uiMode: true,
     testStep: true,
@@ -105,6 +107,22 @@ export const updateBooking = async (
 
   return resp;
 };
+
+export const validateAuth = async(apiClient: any,authType?: 'basic' | 'cookie') =>{
+  const response = await apiClient({
+    method: 'POST',
+    path:'/auth',
+    headers: jsonHeaders,
+    body: {
+      username: process.env.API_USERNAME?.trim(),
+      password: process.env.API_PASSWORD?.trim()},
+    uiMode: true,
+    testStep: true,
+  })
+  return response
+}
+
+
 export { bookingDetailsSchema };
 
 // Future enhancements: also see apiContracts.ts for documentations

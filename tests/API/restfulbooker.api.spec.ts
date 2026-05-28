@@ -6,6 +6,7 @@ import {
   deleteBooking,
   updateBooking,
   getAllBookings,
+  validateAuth,
 } from "../../apiHelper/booking-api";
 import {
   bookingDetailsSchema,
@@ -16,8 +17,8 @@ import { getDynamicUpdatePayload } from "../../data/updated-Payload";
 import { updateFactory } from "../../data/update-factory";
 import { bookingFactory } from "../../data/booking-factory";
 
-test.describe("Restful-booker API testing", () => {
-  test("Ping HealthCheck check to confirm API is up and running. ", async ({
+test.describe("🧪 Restful-booker API testing", () => {
+  test("✅ Ping HealthCheck check to confirm API is up and running. ", async ({
     apiClient,
   }) => {
     const resp = await apiClient({
@@ -28,7 +29,7 @@ test.describe("Restful-booker API testing", () => {
     });
     expect(resp.status, `Response should be ${resp.status}`).toBe(201);
   });
-  test("GET all bookings", async ({ apiClient }) => {
+  test("✅ GET all bookings", async ({ apiClient }) => {
     const created = await getAllBookings(apiClient);
     // const response = await apiClient ({
     //   method: 'GET',
@@ -45,7 +46,10 @@ test.describe("Restful-booker API testing", () => {
 
     expect(created.status, `Response should be ${created.status}`).toBe(200);
   });
-  test("Create a booking with no deposit", async ({ apiClient, authToken }) => {
+  test("✅ Create a booking with no deposit", async ({
+    apiClient,
+    authToken,
+  }) => {
     const body = generateBooking({ depositpaid: false });
     const resp = await apiClient({
       method: "POST",
@@ -63,7 +67,7 @@ test.describe("Restful-booker API testing", () => {
     expect(resp.body?.bookingid).toBeDefined();
   });
 
-  test("Create booking (basic)", async ({ apiClient }) => {
+  test("✅ Create booking (basic)", async ({ apiClient }) => {
     const created = await createBooking(apiClient);
 
     expect(created.status).toBe(200);
@@ -72,7 +76,7 @@ test.describe("Restful-booker API testing", () => {
     expect(created.body?.bookingid).toBeDefined();
   });
 
-  test("Create long stay booking", async ({ apiClient }) => {
+  test("✅ Create long stay booking", async ({ apiClient }) => {
     const booking = bookingFactory.longStay();
 
     const resp = await apiClient({
@@ -91,7 +95,7 @@ test.describe("Restful-booker API testing", () => {
     expect(resp.body?.bookingid).toBeDefined();
   });
 
-  test("Create and Get booking (independent)", async ({
+  test("✅ Create and Get booking (independent)", async ({
     apiClient,
     authToken,
   }) => {
@@ -102,7 +106,7 @@ test.describe("Restful-booker API testing", () => {
     expect(fetched.body).toMatchObject(created.body.booking);
   });
 
-  test("Create, Get and Delete booking", async ({ apiClient }) => {
+  test("✅ Create, Get and Delete booking", async ({ apiClient }) => {
     const created = await createBooking(apiClient);
 
     const fetched = await getBooking(apiClient, created.body.bookingid);
@@ -115,7 +119,7 @@ test.describe("Restful-booker API testing", () => {
     expect(deleted.status, `Delete successful `).toBe(201);
   });
 
-  test("Update booking dynamically", async ({ apiClient }) => {
+  test("✅ Update booking dynamically", async ({ apiClient }) => {
     const created = await createBooking(apiClient);
     const id = created.body.bookingid;
 
@@ -128,7 +132,7 @@ test.describe("Restful-booker API testing", () => {
     expect(updated.body).toMatchObject(updateData);
   });
 
-  test("User update travel details", async ({ apiClient }) => {
+  test("✅ User update travel details", async ({ apiClient }) => {
     const created = await createBooking(apiClient);
     const id = created.body.bookingid;
 
@@ -152,7 +156,7 @@ test.describe("Restful-booker API testing", () => {
     //expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
   });
 
-  test("Mixed dynamic update", async ({ apiClient }) => {
+  test("✅ Mixed dynamic update", async ({ apiClient }) => {
     const created = await createBooking(apiClient);
     const id = created.body.bookingid;
 
@@ -168,7 +172,7 @@ test.describe("Restful-booker API testing", () => {
     expect(updated.body).toMatchObject(updateData);
   });
 
-  test("Upgrade booking to premium", async ({ apiClient }) => {
+  test("✅ Upgrade booking to premium", async ({ apiClient }) => {
     const created = await createBooking(apiClient);
     const id = created.body.bookingid;
 
@@ -181,6 +185,12 @@ test.describe("Restful-booker API testing", () => {
 
     expect(updated.status, `✅ Status is ${updated.status}`).toBe(200);
     expect(updated.body).toMatchObject(premiumUpdate);
+  });
+  
+  test("✅ Validate auth", async ({ apiClient }) => {
+    const res = await validateAuth(apiClient);
+    expect(res.body, `Token present in body`).toHaveProperty("token");
+    expect(res.status, `✅ Status is ${res.status}`).toBe(200);
   });
 });
 
