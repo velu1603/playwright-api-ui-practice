@@ -129,14 +129,16 @@ jobs:
       - name: Merge Allure Results
         run: |
           mkdir -p merged-results
-          FILES=$(find combined-results -type f -name '*.json')
-
-          if [ -z "$FILES" ]; then
-            echo "No Allure result files found!"
-          else
-            find combined-results -type f -name '*.json' -exec cp {} merged-results \;
-          fi
-
+          
+          for dir in combined-results/allure-results-*; do
+            if [ -d "$dir" ]; then
+            cp -r $dir/* merged-results/
+            fi
+          done
+      
+      - name: Debug merged results
+        run: ls -R merged-results
+    
       - name: Restore Allure History
         run: |
           if [ -d "gh-pages/history" ]; then
