@@ -26,6 +26,12 @@ test.describe("🧪 Restful-booker API testing", () => {
       path: "/ping",
       uiMode: true,
       testStep: true,
+      retryConfig:{
+      maxRetries: 3,
+      initialDelayMs: 500,
+      maxDelayMs: 10000,
+      enableJitter: true
+    }
     });
     expect(resp.status, `Response should be ${resp.status}`).toBe(201);
   });
@@ -60,6 +66,12 @@ test.describe("🧪 Restful-booker API testing", () => {
       },
       uiMode: true,
       body: body,
+      retryConfig:{
+      maxRetries: 3,
+      initialDelayMs: 500,
+      maxDelayMs: 10000,
+      enableJitter: true
+    }
     }).validateSchema(createBookingSchema);
 
     expect(resp.status, `Response should be ${resp.status}`).toBe(200);
@@ -88,6 +100,12 @@ test.describe("🧪 Restful-booker API testing", () => {
       },
       uiMode: true,
       body: booking,
+      retryConfig:{
+      maxRetries: 3,
+      initialDelayMs: 500,
+      maxDelayMs: 10000,
+      enableJitter: true
+    }
     }).validateSchema(createBookingSchema);
 
     expect(resp.status, `Response should be ${resp.status}`).toBe(200);
@@ -186,7 +204,7 @@ test.describe("🧪 Restful-booker API testing", () => {
     expect(updated.status, `✅ Status is ${updated.status}`).toBe(200);
     expect(updated.body).toMatchObject(premiumUpdate);
   });
-  
+
   test("✅ Validate auth", async ({ apiClient }) => {
     const res = await validateAuth(apiClient);
     expect(res.body, `Token present in body`).toHaveProperty("token");

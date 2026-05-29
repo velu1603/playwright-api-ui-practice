@@ -1,0 +1,1610 @@
+---
+title: API Request
+description: A typed HTTP client with schema validation for Playwright tests
+outline: deep
+---
+
+# API Request Utility with Schema Validation
+
+The API Request utility provides a clean, typed interface for making HTTP requests in Playwright tests with **built-in schema validation capabilities**. It handles URL construction, header management, response parsing, and **single-line response validation** with proper TypeScript support.
+
+- [API Request Utility with Schema Validation](#api-request-utility-with-schema-validation)
+  - [Features](#features)
+  - [Usage](#usage)
+    - [1. As a Plain Function](#1-as-a-plain-function)
+    - [2. As a Playwright Fixture](#2-as-a-playwright-fixture)
+  - [API Reference](#api-reference)
+    - [apiRequest Function](#apirequest-function)
+    - [Parameters](#parameters)
+    - [Operation-Based Parameters](#operation-based-parameters)
+    - [Return Type](#return-type)
+  - [Examples](#examples)
+    - [GET Request with Authentication](#get-request-with-authentication)
+      - [POST Request with Body](#post-request-with-body)
+    - [Handling Query Parameters](#handling-query-parameters)
+    - [Overriding Request Timeout](#overriding-request-timeout)
+    - [Handling Different Response Types](#handling-different-response-types)
+    - [Using in Non-Test Contexts (Global Setup, Helpers)](#using-in-non-test-contexts-global-setup-helpers)
+  - [Retry Logic (Cypress-Style)](#retry-logic-cypress-style)
+    - [Default Behavior](#default-behavior)
+    - [Retry Configuration](#retry-configuration)
+    - [Retry Examples](#retry-examples)
+      - [Default Retry Behavior](#default-retry-behavior)
+      - [Disable Retry for Error Testing](#disable-retry-for-error-testing)
+      - [Custom Retry Configuration](#custom-retry-configuration)
+    - [Why Only 5xx Errors?](#why-only-5xx-errors)
+  - [Schema Validation](#schema-validation)
+    - [Peer Dependencies](#peer-dependencies)
+    - [Import Options](#import-options)
+    - [Quick Start - Schema Validation](#quick-start---schema-validation)
+    - [Multi-Format Schema Support](#multi-format-schema-support)
+      - [JSON Schema](#json-schema)
+      - [Chained vs Helper Schema Validation](#chained-vs-helper-schema-validation)
+      - [Zod Schema Integration](#zod-schema-integration)
+      - [OpenAPI Specification Support](#openapi-specification-support)
+      - [Schema-Only Validation (No Shape Assertions)](#schema-only-validation-no-shape-assertions)
+      - [Return Mode (Non-Throwing Validation)](#return-mode-non-throwing-validation)
+      - [Advanced Shape Validation with Functions](#advanced-shape-validation-with-functions)
+    - [URL Resolution Strategy](#url-resolution-strategy)
+  - [🆕 Operation-Based Usage (OpenAPI / Code Generators)](#-operation-based-usage-openapi--code-generators)
+    - [The Problem](#the-problem)
+    - [The Solution: Operation Overload](#the-solution-operation-overload)
+    - [The OperationShape Contract](#the-operationshape-contract)
+    - [Operation-Based Examples](#operation-based-examples)
+      - [GET Request with Operation](#get-request-with-operation)
+      - [POST/PUT with Typed Body](#postput-with-typed-body)
+      - [Typed Query Parameters](#typed-query-parameters)
+      - [Query Params Escape Hatch](#query-params-escape-hatch)
+      - [Schema Validation with Operations](#schema-validation-with-operations)
+    - [Query Serialization](#query-serialization)
+    - [Migration Guide](#migration-guide)
+    - [Generator Compatibility](#generator-compatibility)
+  - [UI Mode for API E2E Testing](#ui-mode-for-api-e2e-testing)
+    - [Enable UI Mode](#enable-ui-mode)
+    - [Example](#example)
+  - [Real-World Examples](#real-world-examples)
+    - [CRUD Operations with Typed Fixtures](#crud-operations-with-typed-fixtures)
+    - [Usage in Tests - Traditional vs Schema Validation](#usage-in-tests---traditional-vs-schema-validation)
+    - [Benefits of this Pattern](#benefits-of-this-pattern)
+    - [Integration with Auth Session](#integration-with-auth-session)
+    - [Working with Async Operations and Polling](#working-with-async-operations-and-polling)
+
+## Features
+
+- **Automatic Retry Logic**: Cypress-style retry for server errors (5xx) enabled by default with exponential backoff
+- Strong TypeScript typing for request parameters and responses
+- Four-tier URL resolution strategy (explicit baseUrl, config baseURL, Playwright baseURL, or direct path)
+- Proper handling of URL path normalization and slashes
+- Content-type based response parsing
+- Support for all common HTTP methods
+- **Enhanced UI Mode**: Visual display with schema validation results
+- **🆕 Operation-Based Overload**: Pass OpenAPI operation definitions directly — types inferred automatically, no `typeof` needed
+- **Schema Validation**: Single-line response validation with multiple format support
+- **Multi-Format Schemas**: JSON Schema, YAML files, OpenAPI specifications, Zod schemas
+
+## Usage
+
+The utility can be used in two ways:
+
+### 1. As a Plain Function
+
+```typescript
+import { apiRequest } from '@seontechnologies/playwright-utils'
+
+// Inside a test or another function
+const response = await apiRequest({
+  request: context.request, // Playwright request context
+  method: 'GET',
+  path: '/api/users',
+  baseUrl: 'https://api.example.com',
+  headers: { Authorization: 'Bearer token' }
+})
+
+console.log(response.status) // HTTP status code
+console.log(response.body) // Parsed response body
+```
+
+### 2. As a Playwright Fixture
+
+```typescript
+// Import the fixture
+import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+// Use the fixture in your tests
+test('should fetch user data', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest<UserResponse>({
+    method: 'GET',
+    path: '/api/users/123',
+    headers: { Authorization: 'Bearer token' }
+  })
+
+  // Assertions
+  expect(status).toBe(200)
+  expect(body.name).toBe('John Doe')
+})
+```
+
+## API Reference
+
+### apiRequest Function
+
+```typescript
+async function apiRequest<T = unknown>({
+  request,
+  method,
+  path,
+  baseUrl,
+  configBaseUrl,
+  body,
+  headers,
+  params,
+  testStep,
+  uiMode,
+  retryConfig
+}: ApiRequestParams): Promise<ApiRequestResponse<T>>
+```
+
+### Parameters
+
+| Parameter     | Type                                                      | Description                                                                            |
+| ------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| request       | APIRequestContext                                         | The Playwright request context                                                         |
+| method        | 'GET' \| 'POST' \| 'PUT' \| 'DELETE' \| 'PATCH' \| 'HEAD' | HTTP method to use                                                                     |
+| path          | string                                                    | The URL path (e.g., '/api/users')                                                      |
+| baseUrl       | string (optional)                                         | Base URL to prepend to the path                                                        |
+| configBaseUrl | string (optional)                                         | Fallback base URL from Playwright config                                               |
+| body          | unknown (optional)                                        | Request body for POST/PUT/PATCH (internally mapped to Playwright's 'data' parameter)   |
+| headers       | Record<string, string> (optional)                         | HTTP headers                                                                           |
+| params        | Record<string, string \| boolean \| number> (optional)    | Query parameters                                                                       |
+| testStep      | boolean (optional)                                        | Whether to wrap the call in test.step() (defaults to true)                             |
+| uiMode        | boolean (optional)                                        | Enable rich UI display in Playwright UI (defaults to false)                            |
+| retryConfig   | ApiRetryConfig (optional)                                 | Retry configuration for server errors (defaults enabled, set maxRetries: 0 to disable) |
+| timeout       | number (optional)                                         | Request timeout in milliseconds (overrides Playwright's default of 30000ms)            |
+
+**retryConfig details (defaults):**
+
+```typescript
+{
+  maxRetries: 3,
+  initialDelayMs: 100,
+  backoffMultiplier: 2,
+  maxDelayMs: 5000,
+  enableJitter: true, // Adds random jitter to backoff delays
+  retryStatusCodes: [500, 502, 503, 504]
+}
+```
+
+### Operation-Based Parameters
+
+When using the operation overload, the following parameters apply:
+
+| Parameter     | Type                                                   | Description                                                                                   |
+| ------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| operation     | OperationShape                                         | The operation definition object (provides method, path, and type inference)                   |
+| body          | Op['request'] (optional)                               | Request body, typed from the operation's request type                                         |
+| query         | Op['query'] (optional)                                 | Query parameters, typed from the operation's query type (auto-serialized to bracket notation) |
+| params        | Record<string, string \| boolean \| number> (optional) | Raw query params escape hatch (merged with serialized query; wins on conflict)                |
+| headers       | Record<string, string> (optional)                      | HTTP headers                                                                                  |
+| baseUrl       | string (optional)                                      | Base URL to prepend to the operation's path                                                   |
+| configBaseUrl | string (optional)                                      | Fallback base URL from Playwright config                                                      |
+| testStep      | boolean (optional)                                     | Whether to wrap the call in test.step() (defaults to true)                                    |
+| uiMode        | boolean (optional)                                     | Enable rich UI display in Playwright UI (defaults to false)                                   |
+| retryConfig   | ApiRetryConfig (optional)                              | Retry configuration for server errors                                                         |
+| timeout       | number (optional)                                      | Request timeout in milliseconds (overrides Playwright's default of 30000ms)                   |
+
+**Mutually exclusive fields**: When using `operation`, you cannot pass `method` or `path` — they are extracted from the operation object. TypeScript enforces this at compile time.
+
+```typescript
+// The OperationShape structural type
+type OperationShape = {
+  path: string
+  method: 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
+  response: unknown // type-level: infers return type
+  request: unknown // type-level: infers body type
+  query?: unknown // type-level: infers query type
+}
+```
+
+### Return Type
+
+`apiRequest` returns an enhanced promise that resolves to a response with `status` and `body`, plus a chained `validateSchema()` helper.
+
+```typescript
+type ApiRequestResponse<T = unknown> = {
+  status: number // HTTP status code
+  body: T // Response body, typed as T
+}
+
+type EnhancedApiResponse<T = unknown> = ApiRequestResponse<T> & {
+  validateSchema<TValidated = T>(
+    schema: SupportedSchema,
+    options?: ValidateSchemaOptions
+  ): Promise<ValidatedApiResponse<TValidated>>
+}
+
+type EnhancedApiPromise<T = unknown> = Promise<EnhancedApiResponse<T>> & {
+  validateSchema<TValidated = T>(
+    schema: SupportedSchema,
+    options?: ValidateSchemaOptions
+  ): Promise<ValidatedApiResponse<TValidated>>
+}
+```
+
+## Examples
+
+### GET Request with Authentication
+
+```typescript
+import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+test('fetch user profile', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest<UserProfile>({
+    method: 'GET',
+    path: '/api/profile',
+    headers: {
+      Authorization: 'Bearer token123'
+    }
+  })
+
+  expect(status).toBe(200)
+  expect(body.email).toBeDefined()
+})
+```
+
+#### POST Request with Body
+
+```typescript
+import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+test('create new item', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest<CreateItemResponse>({
+    method: 'POST',
+    path: '/api/items',
+    baseUrl: 'https://api.example.com', // override default baseURL
+    body: {
+      name: 'New Item',
+      price: 19.99
+    },
+    headers: { 'Content-Type': 'application/json' }
+  })
+
+  expect(status).toBe(201)
+  expect(body.id).toBeDefined()
+})
+```
+
+### Handling Query Parameters
+
+```typescript
+test('demonstrates query parameters', async ({ apiRequest }) => {
+  // Query parameters are properly encoded
+  const { status, body } = await apiRequest({
+    method: 'GET',
+    path: '/search',
+    params: {
+      q: 'search term',
+      page: 1,
+      active: true
+    }
+  })
+  // Makes a request to /search?q=search%20term&page=1&active=true
+})
+```
+
+### Overriding Request Timeout
+
+By default, Playwright's request methods time out after 30 seconds. Pass `timeout` (in milliseconds) to override this for slow endpoints. Use `timeout: 0` to disable the timeout entirely. Negative values are ignored, falling back to Playwright's default.
+
+```typescript
+test('handles slow endpoint', async ({ apiRequest }) => {
+  // Override Playwright's default 30s timeout for a slow endpoint
+  const { status, body } = await apiRequest<ReportData>({
+    method: 'GET',
+    path: '/api/reports/generate',
+    timeout: 60000 // 60 seconds
+  })
+
+  expect(status).toBe(200)
+})
+```
+
+### Handling Different Response Types
+
+```typescript
+test('handles different response types', async ({ apiRequest }) => {
+  // JSON responses are automatically parsed
+  const jsonResponse = await apiRequest<UserData>({
+    method: 'GET',
+    path: '/api/users/1'
+  })
+  // jsonResponse.body is typed as UserData
+
+  // Text responses are returned as strings
+  const textResponse = await apiRequest<string>({
+    method: 'GET',
+    path: '/api/plain-text',
+    headers: {
+      Accept: 'text/plain'
+    }
+  })
+  // textResponse.body is a string
+})
+```
+
+### Using in Non-Test Contexts (Global Setup, Helpers)
+
+```typescript
+import { apiRequest } from '@seontechnologies/playwright-utils'
+import { request } from '@playwright/test'
+
+// For use in global setup or outside of test.step() contexts
+async function fetchToken() {
+  const requestContext = await request.newContext()
+
+  const { body } = await apiRequest({
+    request: requestContext,
+    method: 'GET',
+    path: '/auth/token',
+    baseUrl: 'https://api.example.com',
+    testStep: false // Disable test.step wrapping for non-test contexts
+  })
+
+  await requestContext.dispose()
+  return body.token
+}
+```
+
+## Retry Logic (Cypress-Style)
+
+The API Request utility includes automatic retry logic that follows Cypress patterns, retrying only server errors (5xx status codes) by default. This helps with transient network issues and temporary server problems while respecting idempotency for client errors.
+
+### Default Behavior
+
+- **Enabled by Default**: Like Cypress, retry is automatically enabled for all requests
+- **Only 5xx Errors**: Only retries server errors (500, 502, 503, 504) - never client errors (4xx)
+- **Exponential Backoff**: Uses exponential backoff with jitter to prevent thundering herd
+- **3 Attempts**: Default maximum of 3 retry attempts (total 4 requests)
+
+### Retry Configuration
+
+```typescript
+type ApiRetryConfig = {
+  maxRetries?: number // Maximum retry attempts (default: 3)
+  initialDelayMs?: number // Initial delay in ms (default: 100)
+  backoffMultiplier?: number // Exponential multiplier (default: 2)
+  maxDelayMs?: number // Maximum delay cap (default: 5000)
+  enableJitter?: boolean // Add random jitter (default: true)
+  retryStatusCodes?: number[] // Which codes to retry (default: [500, 502, 503, 504])
+}
+```
+
+### Retry Examples
+
+#### Default Retry Behavior
+
+```typescript
+test('automatic retry for server errors', async ({ apiRequest }) => {
+  // Automatically retries 500, 502, 503, 504 errors
+  // Never retries 4xx client errors (good for idempotency)
+  const { status, body } = await apiRequest({
+    method: 'GET',
+    path: '/api/users'
+    // Retry is enabled by default - no config needed
+  })
+
+  expect(status).toBe(200)
+})
+```
+
+#### Disable Retry for Error Testing
+
+```typescript
+test('test error handling without retry', async ({ apiRequest }) => {
+  // Disable retry when you want to test error scenarios
+  const { status } = await apiRequest({
+    method: 'GET',
+    path: '/api/failing-endpoint',
+    retryConfig: { maxRetries: 0 } // Explicitly disable retry
+  })
+
+  expect(status).toBe(500) // Will fail immediately without retry
+})
+```
+
+#### Custom Retry Configuration
+
+```typescript
+test('custom retry settings', async ({ apiRequest }) => {
+  const { status } = await apiRequest({
+    method: 'POST',
+    path: '/api/heavy-operation',
+    body: { data: 'important' },
+    retryConfig: {
+      maxRetries: 5, // More attempts for critical operations
+      initialDelayMs: 500, // Longer initial delay
+      maxDelayMs: 10000, // Higher delay cap
+      enableJitter: false // Disable jitter for predictable timing
+    }
+  })
+
+  expect(status).toBe(201)
+})
+```
+
+### Why Only 5xx Errors?
+
+Following Cypress and HTTP best practices:
+
+- **4xx Client Errors** (400, 401, 403, 404, etc.): These indicate client-side issues (bad request, unauthorized, not found) that won't be resolved by retrying
+- **5xx Server Errors** (500, 502, 503, 504): These indicate temporary server issues that may resolve on retry
+
+```typescript
+test('demonstrates retry behavior', async ({ apiRequest }) => {
+  // These will NOT be retried (fail fast for client errors)
+  try {
+    await apiRequest({
+      method: 'POST',
+      path: '/api/users',
+      body: { email: 'invalid-email' } // 400 Bad Request - no retry
+    })
+  } catch (error) {
+    // Fails immediately without retry attempts
+  }
+
+  // These WILL be retried automatically (server errors)
+  const response = await apiRequest({
+    method: 'GET',
+    path: '/api/sometimes-fails' // May return 503 - will retry with backoff
+  })
+})
+```
+
+## Schema Validation
+
+### Peer Dependencies
+
+Schema validation requires additional dependencies based on your validation needs:
+
+```bash
+# For JSON Schema validation (using AJV)
+npm install ajv
+
+# For Zod schema validation
+npm install zod
+
+# For YAML OpenAPI schema files (required for .yaml/.yml files)
+npm install js-yaml @types/js-yaml
+
+# Install all dependencies for complete schema support
+npm install ajv zod js-yaml @types/js-yaml
+```
+
+**Why peer dependencies?** These validation libraries are marked as optional peer dependencies to:
+
+- Give you control over which validation libraries to include in your bundle
+- Allow you to choose specific versions that work with your project
+- Avoid unnecessary bundle size if you only need specific validation types
+
+**When each dependency is needed:**
+
+- `ajv` - Required for JSON Schema validation
+- `zod` - Required for Zod schema validation
+- `js-yaml` - Required for YAML OpenAPI file loading (`.yaml`/`.yml` files)
+
+**Error handling:** If you attempt to use schema validation without the required dependency installed, you'll get a clear error message indicating which package to install.
+
+### Import Options
+
+The `validateSchema` function can be imported in multiple ways depending on your use case:
+
+#### 1. As a Plain Function (Non-Fixture)
+
+Use this when you need schema validation outside of Playwright test context, such as in helper utilities, global setup, or standalone scripts:
+
+```typescript
+import {
+  validateSchema,
+  detectSchemaFormat,
+  ValidationError
+} from '@seontechnologies/playwright-utils/api-request/schema-validation'
+
+// Plain function signature: (data, schema, options)
+const result = await validateSchema(responseBody, MySchema, {
+  shape: { status: 200 }
+})
+
+if (result.success) {
+  console.log('Validation passed')
+} else {
+  console.log('Validation errors:', result.errors)
+}
+
+// Detect schema format (Zod, JSON Schema, OpenAPI, etc.)
+const format = detectSchemaFormat(MySchema) // Returns 'Zod Schema' | 'JSON Schema' | 'JSON OpenAPI' | 'YAML OpenAPI'
+```
+
+> **Note:** The plain function uses `(data, schema, options)` parameter order, while the fixture uses `(schema, data, options)`. This allows the fixture to mirror the chained API pattern.
+
+**Available exports from this path:**
+
+- `validateSchema` - Core validation function with signature `(data, schema, options)`
+- `detectSchemaFormat` - Detect schema type automatically
+- `ValidationError` - Error class for validation failures
+- Types: `SupportedSchema`, `ValidationMode`, `ValidateSchemaOptions`, `ValidationResult`, etc.
+
+#### 2. As a Playwright Fixture
+
+Use this within Playwright tests for seamless integration with test reporting.
+
+> **Note:** The fixture uses `(schema, data, options)` parameter order to match the chained API pattern.
+
+```typescript
+// Option A: Using merged fixtures (recommended)
+import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+test('validate response', async ({ apiRequest, validateSchema }) => {
+  const { body } = await apiRequest({ method: 'GET', path: '/api/data' })
+  // Fixture signature: (schema, data, options)
+  await validateSchema(MySchema, body, { shape: { status: 200 } })
+})
+```
+
+```typescript
+// Option B: Using mergeTests with your own fixtures
+import { mergeTests } from '@playwright/test'
+import { test as validateSchemaFixture } from '@seontechnologies/playwright-utils/api-request/schema-validation'
+import { test as myFixtures } from './my-fixtures'
+
+export const test = mergeTests(myFixtures, validateSchemaFixture)
+
+test('validate response', async ({ validateSchema }) => {
+  // validateSchema fixture is available
+})
+```
+
+#### 3. Chained API (via apiRequest)
+
+The most common pattern - chain `.validateSchema()` directly on apiRequest calls:
+
+```typescript
+import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+test('chained validation', async ({ apiRequest }) => {
+  const response = await apiRequest({
+    method: 'GET',
+    path: '/api/data'
+  }).validateSchema(MySchema, { shape: { status: 200 } })
+})
+```
+
+#### Import Summary
+
+| Import Path                                                        | Type               | Use Case                          |
+| ------------------------------------------------------------------ | ------------------ | --------------------------------- |
+| `@seontechnologies/playwright-utils/api-request/schema-validation` | Plain function     | Helpers, utilities, non-test code |
+| `@seontechnologies/playwright-utils/fixtures`                      | Merged fixture     | Standard Playwright tests         |
+| `@seontechnologies/playwright-utils/api-request/fixtures`          | Standalone fixture | Custom `mergeTests` setups        |
+
+### Quick Start - Schema Validation
+
+Reduce 5-10 lines of manual validation to a single line with built-in schema validation:
+
+> **Note:** Examples below use the merged fixtures import. See [Import Options](#import-options) for all available import patterns including plain function usage.
+
+```typescript
+import { test, expect } from '@seontechnologies/playwright-utils/fixtures'
+import { CreateMovieResponseSchema } from '../../../sample-app/shared/types/schema'
+
+test('schema validation basics', async ({
+  apiRequest,
+  authToken,
+  validateSchema
+}) => {
+  const movieData = {
+    name: 'Test Movie',
+    year: 2024,
+    rating: 8.5,
+    director: 'Test Director'
+  }
+
+  // Traditional approach: Multiple manual assertions
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  })
+  expect(response.status).toBe(200)
+  expect(response.body.data.name).toBe('Test Movie')
+  expect(response.body.data.id).toBeDefined()
+  // ... more assertions
+
+  // NEW: Single-line schema validation with Zod
+  const validatedResponse = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(CreateMovieResponseSchema, {
+    shape: { status: 200, data: { name: 'Test Movie' } }
+  })
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(CreateMovieResponseSchema, body, { shape: { ... } })
+
+  // Type assertion needed for accessing response data
+  const responseBody = validatedResponse.body as {
+    status: number
+    data: { id: string; name: string }
+  }
+
+  // Response is guaranteed valid with proper typing
+  expect(responseBody.data.id).toBeDefined()
+  expect(responseBody.data.name).toBe('Test Movie')
+})
+```
+
+TypeScript note: schema validation verifies runtime shape but does not infer a compile-time type for `response.body`. The examples use inline assertions for clarity; consider a shared response type (for example `z.infer<typeof Schema>`) or a typed helper that wraps `validateSchema<TValidated>()` to reduce repetition.
+
+### Multi-Format Schema Support
+
+#### JSON Schema
+
+```typescript
+test('JSON Schema validation basics', async ({ apiRequest, authToken }) => {
+  const movieData = {
+    name: 'Test Movie',
+    year: 2024,
+    rating: 8.5,
+    director: 'Test Director'
+  }
+
+  // Define JSON schema directly
+  const jsonSchema = {
+    type: 'object',
+    properties: {
+      status: { type: 'number' },
+      data: {
+        type: 'object',
+        properties: {
+          id: { type: 'number' },
+          name: { type: 'string' },
+          year: { type: 'number' },
+          rating: { type: 'number' },
+          director: { type: 'string' }
+        },
+        required: ['id', 'name', 'year', 'rating', 'director']
+      }
+    },
+    required: ['status', 'data']
+  }
+
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(jsonSchema, {
+    shape: {
+      status: 200,
+      data: {
+        name: movieData.name,
+        year: movieData.year,
+        rating: movieData.rating,
+        director: movieData.director
+      }
+    }
+  })
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(jsonSchema, body, { shape: { ... } })
+
+  // Type assertion for accessing response data
+  const responseBody = response.body as {
+    status: number
+    data: { id: string; name: string }
+  }
+
+  // Response is guaranteed valid and type-safe
+  expect(responseBody.data.id).toBeDefined()
+  expect(responseBody.data.name).toBe(movieData.name)
+})
+```
+
+```typescript
+test('JSON Schema validation with awaited helper', async ({
+  addMovie,
+  authToken,
+  validateSchema
+}) => {
+  const { body } = await addMovie(authToken, movie)
+
+  await validateSchema(jsonSchema, body, {
+    shape: {
+      status: 200,
+      data: {
+        name: movie.name,
+        year: movie.year,
+        rating: movie.rating,
+        director: movie.director
+      }
+    }
+  })
+})
+```
+
+#### Chained vs Helper Schema Validation
+
+Both `.validateSchema()` and the standalone `validateSchema()` helper share the same validation engine. Choose the style that fits how you obtain your response:
+
+- **Chained** — works great when you call `apiRequest()` directly and want a fluent API.
+- **Helper** — ideal when a fixture wraps `apiRequest()` (for example with `functionTestStep`) or when you already have the `{ status, body }` pair from another helper.
+
+```typescript
+// Chained style (fluent)
+const { body } = await apiRequest({
+  method: 'GET',
+  path: '/movies/123'
+}).validateSchema(GetMovieResponseUnionSchema)
+
+// Awaited style (fixture-friendly)
+const { body } = await getMovieById(authToken, movieId)
+await validateSchema(GetMovieResponseUnionSchema, body, {
+  shape: {
+    status: 200,
+    data: expect.objectContaining({ id: movieId })
+  }
+})
+```
+
+> **Tip:** Both styles return the same object, support every `validateSchema` option, and can be mixed within the same test suite.
+
+#### Zod Schema Integration
+
+```typescript
+import { CreateMovieResponseSchema } from '../../../sample-app/shared/types/schema'
+
+test('Zod schema validation with TypeScript inference', async ({
+  apiRequest,
+  authToken
+}) => {
+  const movieData = {
+    name: 'Test Movie',
+    year: 2024,
+    rating: 8.5,
+    director: 'Test Director'
+  }
+
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(CreateMovieResponseSchema)
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(CreateMovieResponseSchema, body)
+
+  // Response is guaranteed valid with proper typing
+  expect(response.body.data.id).toBeDefined()
+  expect(response.body.data.name).toBe(movieData.name)
+  expect(response.body.status).toBe(200)
+})
+```
+
+```typescript
+test('Zod schema validation with awaited helper', async ({
+  getMovieById,
+  authToken,
+  validateSchema
+}) => {
+  const { body } = await getMovieById(authToken, movieId)
+
+  await validateSchema(CreateMovieResponseSchema, body, {
+    shape: {
+      status: 200,
+      data: expect.objectContaining({ id: movieId })
+    }
+  })
+})
+```
+
+#### OpenAPI Specification Support
+
+```typescript
+import openApiJson from '../../../sample-app/backend/src/api-docs/openapi.json'
+
+test('OpenAPI JSON specification validation', async ({
+  apiRequest,
+  authToken
+}) => {
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(openApiJson, {
+    endpoint: '/movies',
+    method: 'POST',
+    status: 200,
+    shape: {
+      status: 200,
+      data: {
+        name: movieData.name,
+        year: movieData.year
+      }
+    }
+  })
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(openApiJson, body, { shape: { ... } })
+
+  // Type assertion for accessing response data
+  const responseBody = response.body as {
+    status: number
+    data: { id: string; name: string }
+  }
+
+  expect(responseBody.data.id).toBeDefined()
+  expect(responseBody.data.name).toBe(movieData.name)
+})
+```
+
+When you want to assert on `validationResult`, capture the returned object from the helper:
+
+```typescript
+import openApiJson from '../../../sample-app/backend/src/api-docs/openapi.json'
+
+test('awaited OpenAPI JSON validation', async ({
+  apiRequest,
+  authToken,
+  validateSchema
+}) => {
+  const { body } = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  })
+
+  const result = await validateSchema(openApiJson, body, {
+    endpoint: '/movies',
+    method: 'POST',
+    status: 200,
+    shape: {
+      status: 200,
+      data: expect.objectContaining({ name: movieData.name })
+    }
+  })
+
+  expect(result.validationResult.success).toBe(true)
+})
+```
+
+```typescript
+test('OpenAPI YAML file validation', async ({ apiRequest, authToken }) => {
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema('./api-docs/openapi.yml', {
+    path: '/movies', // 'path' and 'endpoint' are interchangeable
+    method: 'POST',
+    status: 200
+  })
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema('./api-docs/openapi.yml', body, {
+  //   path: '/movies',
+  //   method: 'POST',
+  //   status: 200
+  // })
+
+  const responseBody = response.body as {
+    status: number
+    data: { id: string }
+  }
+
+  expect(responseBody.data.id).toBeDefined()
+})
+```
+
+#### Schema-Only Validation (No Shape Assertions)
+
+```typescript
+import { GetMovieResponseUnionSchema } from '../../../sample-app/shared/types/schema'
+
+test('schema validation without shape assertions', async ({
+  apiRequest,
+  authToken
+}) => {
+  // Schema-only validation - options parameter is optional
+  const response = await apiRequest({
+    method: 'GET',
+    path: `/movies/123`,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(GetMovieResponseUnionSchema)
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(GetMovieResponseUnionSchema, body)
+
+  // Type assertion for accessing response data
+  const responseBody = response.body as {
+    status: number
+    data: unknown
+  }
+
+  // Only schema compliance is validated, no additional shape assertions
+  expect(responseBody.status).toBe(200)
+  expect(responseBody.data).toBeDefined()
+})
+```
+
+```typescript
+test('return mode validation with awaited helper', async ({
+  apiRequest,
+  authToken,
+  validateSchema
+}) => {
+  const { body } = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  })
+
+  const result = await validateSchema('./api-docs/openapi.yml', body, {
+    path: '/movies',
+    method: 'POST',
+    status: 200,
+    mode: 'return'
+  })
+
+  expect(result.validationResult.success).toBe(true)
+  expect(result.validationResult.errors).toBeUndefined()
+})
+```
+
+#### Return Mode (Non-Throwing Validation)
+
+```typescript
+import { z } from 'zod'
+
+test('return mode validation - does not throw on failure', async ({
+  apiRequest,
+  authToken
+}) => {
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(
+    z.object({
+      status: z.literal(999), // This will fail - API returns 200
+      data: z.any()
+    }),
+    {
+      mode: 'return' // Don't throw on failure
+    }
+  )
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(z.object({ ... }), body, { mode: 'return' })
+
+  // Response indicates validation failure but doesn't throw
+  expect(response.validationResult.success).toBe(false)
+  expect(response.validationResult.errors).toBeDefined()
+  expect(response.validationResult.errors.length).toBeGreaterThan(0)
+
+  // Original response data is still accessible
+  const responseBody = response.body as {
+    status: number
+    data: unknown
+  }
+  expect(responseBody.status).toBe(200)
+  expect(responseBody.data).toBeDefined()
+})
+```
+
+#### Advanced Shape Validation with Functions
+
+```typescript
+import { CreateMovieResponseSchema } from '../../../sample-app/shared/types/schema'
+
+test('combined schema + shape validation with functions', async ({
+  apiRequest,
+  authToken
+}) => {
+  const response = await apiRequest({
+    method: 'POST',
+    path: '/movies',
+    body: movieData,
+    headers: { Cookie: `app-jwt=${authToken}` }
+  }).validateSchema(CreateMovieResponseSchema, {
+    shape: {
+      status: 200,
+      data: {
+        name: (name: string) => name.length > 0,
+        year: (year: number) =>
+          year >= 1900 && year <= new Date().getFullYear(),
+        rating: (rating: number) => rating >= 0 && rating <= 10,
+        id: (id: string) => typeof id === 'string'
+      }
+    }
+  })
+  // Fixture style:
+  // const { body } = await apiRequest({ ... })
+  // await validateSchema(CreateMovieResponseSchema, body, { shape: { ... } })
+
+  // Type assertion for accessing response data
+  const responseBody = response.body as {
+    status: number
+    data: { name: string; year: number }
+  }
+
+  // Both schema compliance AND shape assertions pass
+  expect(responseBody.data.name).toBe(movieData.name)
+  expect(responseBody.data.year).toBe(movieData.year)
+})
+```
+
+```typescript
+test('awaited helper with shape functions', async ({
+  updateMovie,
+  authToken,
+  validateSchema
+}) => {
+  const { body } = await updateMovie(authToken, movieId, updatedMovie)
+
+  await validateSchema(CreateMovieResponseSchema, body, {
+    shape: {
+      status: 200,
+      data: {
+        name: (name: string) => name.length > 0,
+        rating: (rating: number) => rating >= 0 && rating <= 10
+      }
+    }
+  })
+})
+```
+
+### URL Resolution Strategy
+
+> **Note**: The apiRequest utility follows a priority order for resolving URLs:
+>
+> 1. Explicit `baseUrl` parameter in the function call
+> 2. `configBaseUrl` parameter in the function call
+> 3. Playwright config's `baseURL` from your `playwright.config.ts` file
+> 4. Absolute URLs in the `path` parameter are used as-is
+
+## 🆕 Operation-Based Usage (OpenAPI / Code Generators)
+
+If your project uses a code generator (custom scripts, [orval](https://orval.dev), [openapi-generator](https://openapi-generator.tech), or a published SDK) that produces typed operation definitions from an OpenAPI spec, `apiRequest` can accept these directly — eliminating boilerplate and giving you full type inference for request bodies, response types, and query parameters.
+
+### The Problem
+
+When using generated operation helpers with the classic `apiRequest` signature, every call requires manual extraction and `typeof` assertions:
+
+```typescript
+// Verbose: repeated in every test across every file
+const upsertPerson = upsertPersonv2({ customerId })
+
+const { status, body } = await apiRequest<typeof upsertPerson.response>({
+  method: upsertPerson.method,
+  path: upsertPerson.path,
+  headers: getHeaders(customerId),
+  body: personInput
+})
+
+// Query params lose type safety entirely
+const getPeople = getPeoplev2({ customerId })
+const { body } = await apiRequest<typeof getPeople.response>({
+  method: getPeople.method,
+  path: `${getPeople.path}?page=0&page_size=5`, // manual string concatenation
+  headers: getHeaders(customerId)
+})
+```
+
+### The Solution: Operation Overload
+
+Pass the operation object directly via the `operation` field. TypeScript infers all types automatically — no explicit generic parameter, no manual `method`/`path` extraction:
+
+```typescript
+// Clean: types fully inferred from the operation
+const { status, body } = await apiRequest({
+  operation: upsertPersonv2({ customerId }),
+  headers: getHeaders(customerId),
+  body: personInput // compile-time typed as Schemas.PersonInput
+})
+// body is automatically typed as Schemas.Person
+
+// Typed query params — no string concatenation
+const { body } = await apiRequest({
+  operation: getPeoplev2({ customerId }),
+  headers: getHeaders(customerId),
+  query: { page: 0, page_size: 5 } // typed from the operation's query definition
+})
+```
+
+Both overloads coexist — the classic `method`/`path` signature continues to work identically. Choose whichever style fits your project.
+
+### The OperationShape Contract
+
+The operation overload uses **structural typing** (duck typing). Your operation objects just need to match this shape — no imports from `playwright-utils` required in your generator:
+
+```typescript
+type OperationShape = {
+  path: string
+  method: 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
+  response: unknown // type-level only (used for return type inference)
+  request: unknown // type-level only (used for body type inference)
+  query?: unknown // type-level only (used for query type inference)
+}
+```
+
+Any code generator that produces objects with this shape will get full type inference for free. The `response`, `request`, and `query` fields are **type-level placeholders only** — their runtime values are never read.
+
+### Operation-Based Examples
+
+#### GET Request with Operation
+
+```typescript
+import { test, expect } from '@seontechnologies/playwright-utils/fixtures'
+
+test('fetch people list', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest({
+    operation: getPeoplev2({ customerId: 123 }),
+    headers: getHeaders(123)
+  })
+  // body is typed as Array<Schemas.Person> — no typeof needed
+
+  expect(status).toBe(200)
+  expect(body.length).toBeGreaterThan(0)
+  expect(body[0].name).toBeDefined()
+})
+```
+
+#### POST/PUT with Typed Body
+
+```typescript
+test('create person', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest({
+    operation: upsertPersonv2({ customerId: 123 }),
+    headers: getHeaders(123),
+    body: personInput // compile-time validated against Schemas.PersonInput
+  })
+  // body is typed as Schemas.Person
+
+  expect(status).toBe(200)
+  expect(body.id).toBeDefined()
+})
+```
+
+#### Typed Query Parameters
+
+When the operation defines a `query` type, use the `query` field for type-safe parameters. They are serialized to bracket-notation query strings automatically:
+
+```typescript
+test('search with typed query', async ({ apiRequest }) => {
+  const { body } = await apiRequest({
+    operation: getPeoplev2({ customerId: 123 }),
+    headers: getHeaders(123),
+    query: { page: 0, page_size: 5 } // typed from the operation
+  })
+  // Sends: GET /v2/123/people?page=0&page_size=5
+
+  expect(body.length).toBeLessThanOrEqual(5)
+})
+```
+
+Nested objects and arrays are serialized using bracket notation:
+
+```typescript
+query: {
+  filters: {
+    hits: ['sanctions', 'pep']
+  }
+}
+// Sends: ?filters[hits][0]=sanctions&filters[hits][1]=pep
+```
+
+#### Query Params Escape Hatch
+
+The built-in query serializer uses best-effort bracket notation. If your API requires a different format, or the generated query type is incomplete, use the `params` escape hatch alongside `operation`:
+
+```typescript
+test('mixed query strategies', async ({ apiRequest }) => {
+  const { body } = await apiRequest({
+    operation: getPeoplev2({ customerId: 123 }),
+    headers: getHeaders(123),
+    query: { page: 0, page_size: 5 }, // typed, auto-serialized
+    params: { 'filters[hits][0]': 'sanctions' } // raw, passed directly
+  })
+  // Both are merged into query params (params wins on key conflict)
+})
+```
+
+When `query` and `params` are both provided, serialized `query` entries are merged with raw `params` entries. If the same key appears in both, `params` takes precedence.
+
+#### Schema Validation with Operations
+
+The `.validateSchema()` chain works identically with operation-based calls:
+
+```typescript
+test('operation + schema validation', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest({
+    operation: upsertPersonv2({ customerId: 123 }),
+    headers: getHeaders(123),
+    body: personInput
+  }).validateSchema(PersonResponseSchema, {
+    shape: {
+      id: expect.any(String),
+      name: personInput.name
+    }
+  })
+
+  expect(status).toBe(200)
+})
+```
+
+### Query Serialization
+
+The operation overload includes a built-in query serializer that converts nested objects to bracket-notation query parameters. This is **best-effort** and covers common patterns:
+
+| Input                               | Serialized Output                       |
+| ----------------------------------- | --------------------------------------- |
+| `{ page: 1 }`                       | `page=1`                                |
+| `{ active: true }`                  | `active=true`                           |
+| `{ filters: { type: 'pep' } }`      | `filters[type]=pep`                     |
+| `{ ids: [10, 20] }`                 | `ids[0]=10&ids[1]=20`                   |
+| `{ filters: { hits: ['a', 'b'] } }` | `filters[hits][0]=a&filters[hits][1]=b` |
+| `null` / `undefined` values         | Skipped                                 |
+
+If your API requires a different serialization style (e.g., comma-separated arrays, repeated keys), use the `params` escape hatch to provide pre-formatted query parameters.
+
+### Migration Guide
+
+Migrating from the classic pattern to the operation overload:
+
+```typescript
+// Step 1: Remove the intermediate variable and typeof
+// BEFORE
+const op = upsertPersonv2({ customerId })
+const { body } = await apiRequest<typeof op.response>({
+  method: op.method,
+  path: op.path,
+  headers: getHeaders(customerId),
+  body: personInput
+})
+
+// AFTER
+const { body } = await apiRequest({
+  operation: upsertPersonv2({ customerId }),
+  headers: getHeaders(customerId),
+  body: personInput
+})
+```
+
+```typescript
+// Step 2: Replace string concatenation with typed query
+// BEFORE
+const op = getPeoplev2({ customerId })
+const { body } = await apiRequest<typeof op.response>({
+  method: op.method,
+  path: `${op.path}?page=0&page_size=5`,
+  headers: getHeaders(customerId)
+})
+
+// AFTER
+const { body } = await apiRequest({
+  operation: getPeoplev2({ customerId }),
+  headers: getHeaders(customerId),
+  query: { page: 0, page_size: 5 }
+})
+```
+
+**Important**: When using the operation overload, **do not pass an explicit generic** (`apiRequest<SomeType>({ operation: ... })`). The return type is inferred from the operation's `response` field automatically. Adding an explicit generic will conflict with the type inference.
+
+### Generator Compatibility
+
+The operation overload works with **any code generator** that produces objects matching the `OperationShape` interface. Tested patterns include:
+
+| Generator                                           | Compatible | Notes                                                      |
+| --------------------------------------------------- | ---------- | ---------------------------------------------------------- |
+| Custom scripts                                      | Yes        | Must produce `{ path, method, response, request, query? }` |
+| [orval](https://orval.dev)                          | Yes        | Configure output to match the structural shape             |
+| [openapi-generator](https://openapi-generator.tech) | Yes        | TypeScript generators produce compatible types             |
+| Published SDK                                       | Yes        | As long as operation objects expose the required fields    |
+
+Since `OperationShape` uses structural typing, your generator does **not** need to import or extend any type from `playwright-utils`. If the object has the right fields with compatible types, it works.
+
+## UI Mode for API E2E Testing
+
+Enables rich visual feedback for API requests in Playwright UI with formatted request/response details, duration tracking, and status color coding.
+
+### Enable UI Mode
+
+**Environment Variable (Recommended):**
+
+```typescript
+// In config or at top of test file
+process.env.API_E2E_UI_MODE = 'true'
+```
+
+**Per-Request:**
+
+```typescript
+const response = await apiRequest({
+  method: 'GET',
+  path: '/api/movies',
+  uiMode: true
+})
+```
+
+### Example
+
+```typescript
+process.env.API_E2E_UI_MODE = 'true'
+
+test('API test with UI display', async ({ apiRequest }) => {
+  const { status, body } = await apiRequest({
+    method: 'POST',
+    path: '/api/movies',
+    body: { name: 'Test Movie', year: 2023 }
+  })
+
+  expect(status).toBe(201)
+})
+```
+
+## Real-World Examples
+
+### CRUD Operations with Typed Fixtures
+
+The API request utility shines when used with fixtures for CRUD operations. This example shows a real implementation using proper typing and a functional approach:
+
+```typescript
+// From playwright/support/fixtures/crud-helper-fixture.ts
+export const test = baseApiRequestFixture.extend<CrudParams>({
+  // Create movie API fixture with proper typing
+  addMovie: async ({ apiRequest }, use) => {
+    const addMovieBase = async (
+      token: string,
+      body: Omit<Movie, 'id'>,
+      baseUrl?: string
+    ) =>
+      apiRequest<CreateMovieResponse>({
+        method: 'POST',
+        path: '/movies',
+        baseUrl,
+        body,
+        headers: { Authorization: token }
+      })
+
+    // Enhanced with test step for better reporting
+    const addMovie = functionTestStep('Add Movie', addMovieBase)
+    await use(addMovie)
+  },
+
+  // Get movie by ID with proper typing
+  getMovieById: async ({ apiRequest }, use) => {
+    const getMovieByIdBase = async (
+      token: string,
+      id: string,
+      baseUrl?: string
+    ) =>
+      apiRequest<GetMovieResponse>({
+        method: 'GET',
+        path: `/movies/${id}`,
+        baseUrl,
+        headers: { Authorization: token }
+      })
+
+    const getMovieById = functionTestStep('Get Movie By ID', getMovieByIdBase)
+    await use(getMovieById)
+  },
+
+  // Additional operations follow the same pattern
+  updateMovie: async ({ apiRequest }, use) => {
+    // Implementation with proper typing and test step decoration
+    await use(functionTestStep('Update Movie', updateMovieBase))
+  },
+
+  deleteMovie: async ({ apiRequest }, use) => {
+    // Implementation with proper typing and test step decoration
+    await use(functionTestStep('Delete Movie', deleteMovieBase))
+  }
+})
+```
+
+### Usage in Tests - Traditional vs Schema Validation
+
+Real examples showing both approaches from the CRUD tests:
+
+```typescript
+// From playwright/tests/sample-app/backend/crud-movie-event.spec.ts
+test('should perform CRUD operations with schema validation', async ({
+  addMovie,
+  getAllMovies,
+  getMovieById,
+  updateMovie,
+  deleteMovie,
+  authToken
+}) => {
+  const movie = generateMovieWithoutId()
+  const updatedMovie = generateMovieWithoutId()
+
+  // Create movie with BOTH schema validation AND traditional assertions
+  const { body: createResponse, status: createStatus } = await addMovie(
+    authToken,
+    movie
+  ).validateSchema(CreateMovieResponseSchema, {
+    shape: {
+      status: 200,
+      data: { ...movieProps, id: expect.any(String) }
+    }
+  })
+
+  // Traditional assertions kept for comparison - with validateSchema we get BOTH:
+  // 1. Schema validation (above) + 2. Traditional assertions (below) if desired
+  expect(createStatus).toBe(200)
+  expect(createResponse).toMatchObject({
+    status: 200,
+    data: { ...movieProps, id: movieId }
+  })
+
+  const movieId = createResponse.data.id
+
+  // Get all movies with schema validation
+  const { body: getAllResponse, status: getAllStatus } = await getAllMovies(
+    authToken
+  ).validateSchema(GetMovieResponseUnionSchema, {
+    shape: {
+      status: 200,
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: movieId, name: movie.name })
+      ])
+    }
+  })
+  // classic assertions: we can do either the above or the below
+  expect(getAllResponse).toMatchObject({
+    status: 200,
+    data: expect.arrayContaining([
+      expect.objectContaining({ id: movieId, name: movie.name })
+    ])
+  })
+  expect(getAllStatus).toBe(200)
+
+  // Get movie by ID with schema-only validation (no shape assertions)
+  const { body: getByIdResponse, status: getByIdStatus } = await getMovieById(
+    authToken,
+    movieId
+  ).validateSchema(GetMovieResponseUnionSchema)
+
+  // Traditional assertions can coexist with schema validation
+  expect(getByIdStatus).toBe(200)
+  expect(getByIdResponse).toMatchObject({
+    status: 200,
+    data: { ...movieProps, id: movieId }
+  })
+
+  // Update movie with schema validation
+  const { body: updateResponse, status: updateStatus } = await updateMovie(
+    authToken,
+    movieId,
+    updatedMovie
+  ).validateSchema(UpdateMovieResponseSchema, {
+    shape: {
+      status: 200,
+      data: {
+        id: movieId,
+        name: updatedMovie.name,
+        year: updatedMovie.year,
+        rating: updatedMovie.rating,
+        director: updatedMovie.director
+      }
+    }
+  })
+  // classic assertions: we can do either the above or the below
+  expect(updateStatus).toBe(200)
+
+  // Delete with schema validation
+  const { status: deleteStatus, body: deleteResponseBody } = await deleteMovie(
+    authToken,
+    movieId
+  ).validateSchema(DeleteMovieResponseSchema, {
+    shape: {
+      message: `Movie ${movieId} has been deleted`
+    }
+  })
+  expect(deleteStatus).toBe(200)
+  expect(deleteResponseBody.message).toBe(`Movie ${movieId} has been deleted`)
+
+  // Verify movie no longer exists with schema validation
+  await getAllMovies(authToken).validateSchema(GetMovieResponseUnionSchema, {
+    shape: {
+      status: 200,
+      data: expect.not.arrayContaining([
+        expect.objectContaining({ id: movieId })
+      ])
+    }
+  })
+})
+```
+
+### Benefits of this Pattern
+
+This approach offers several advantages aligned with SEON's development principles:
+
+- **Type Safety**: Full TypeScript support through generics
+- **Reusability**: Fixtures are reusable across all test files
+- **Function Composition**: Enhanced with logging via `functionTestStep`
+- **Clean Separation**: API client logic is separate from test logic
+- **Maintainability**: Changes to endpoints only need to be updated in one place
+- **Readability**: Tests clearly express intent without implementation details
+
+### Integration with Auth Session
+
+The API request utility works seamlessly with the Auth Session manager:
+
+```typescript
+test('should use cached auth token', async ({
+  apiRequest,
+  authToken // From auth session fixture
+}) => {
+  // The authToken is retrieved from cache if available
+  // Only fetched from API if needed/invalid
+  const { status, body } = await apiRequest({
+    method: 'GET',
+    path: '/api/protected-resource',
+    headers: {
+      Authorization: `Bearer ${authToken}`
+    }
+  })
+
+  expect(status).toBe(200)
+})
+```
+
+### Working with Async Operations and Polling
+
+Combining with the `recurse` utility for polling async operations:
+
+```typescript
+test('should wait for resource creation', async ({
+  apiRequest,
+  authToken,
+  recurse
+}) => {
+  // Create a resource that triggers an async process
+  const { body: createResponse } = await apiRequest({
+    method: 'POST',
+    path: '/api/resources',
+    body: { name: 'Async Resource' },
+    headers: { Authorization: `Bearer ${authToken}` }
+  })
+
+  const resourceId = createResponse.id
+
+  // Poll until the resource is in the desired state
+  await recurse(
+    async () => {
+      const { body } = await apiRequest({
+        method: 'GET',
+        path: `/api/resources/${resourceId}`,
+        headers: { Authorization: `Bearer ${authToken}` }
+      })
+
+      // Can use assertions directly in the predicate
+      expect(body.status).toBe('COMPLETED')
+    },
+    {
+      interval: 1000,
+      timeout: 30000,
+      timeoutMessage: `Resource ${resourceId} did not complete in time`
+    }
+  )
+})
+```

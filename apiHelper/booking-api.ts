@@ -8,6 +8,7 @@ import {
 } from "../schema/booking.schema";
 import { apiContracts } from "./apiContracts";
 import {jsonHeaders} from '../api/config/headers'
+import {DEFAULT_RETRY_CONFIG} from '../constants/default_retry_config'
 
 
 
@@ -37,6 +38,7 @@ export const createBooking = async (
     uiMode: true,
     testStep: true,
     body: data,
+    retryConfig: DEFAULT_RETRY_CONFIG
   }).validateSchema(apiContracts.createBooking);
 
   return resp;
@@ -48,6 +50,7 @@ export const getAllBookings = async (apiClient: any) => {
     path: `/booking`,
     uiMode: true,
     testStep: true,
+    retryConfig: DEFAULT_RETRY_CONFIG
   }).validateSchema(apiContracts.getAllBooking);
 
   return resp;
@@ -59,6 +62,7 @@ export const getBooking = async (apiClient: any, id: number) => {
     path: `/booking/${id}`,
     uiMode: true,
     testStep: true,
+    retryConfig: DEFAULT_RETRY_CONFIG
   }).validateSchema(apiContracts.getBooking); //bookingDetailsSchema
 
   return resp;
@@ -73,6 +77,7 @@ export const deleteBooking = async (apiClient: any, id: number) => {
 
     uiMode: true,
     testStep: true,
+    retryConfig: DEFAULT_RETRY_CONFIG
   });
 
   return resp;
@@ -103,6 +108,7 @@ export const updateBooking = async (
     uiMode: true,
     testStep: true,
     body: updatedBody,
+    retryConfig: DEFAULT_RETRY_CONFIG
   }).validateSchema(apiContracts.updateBooking); // bookingDetailsSchema
 
   return resp;
@@ -118,6 +124,7 @@ export const validateAuth = async(apiClient: any,authType?: 'basic' | 'cookie') 
       password: process.env.API_PASSWORD?.trim()},
     uiMode: true,
     testStep: true,
+    retryConfig: DEFAULT_RETRY_CONFIG
   })
   return response
 }
