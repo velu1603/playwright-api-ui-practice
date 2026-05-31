@@ -8,7 +8,7 @@ import {
 } from "../schema/booking.schema";
 import { apiContracts } from "./apiContracts";
 import {jsonHeaders} from '../api/config/headers'
-import {DEFAULT_RETRY_CONFIG} from '../constants/default_retry_config'
+import {DEFAULT_RETRY_CONFIG} from '../api/config/retry-config'
 
 
 
