@@ -7,7 +7,8 @@ import { z } from "zod";
 export const bookingDatesSchema = z.object({
   checkin: z.string(),
   checkout: z.string(),
-});
+  //checkedIn: z.string()
+}).strict();
 
 export const bookingDetailsSchema = z
   .object({

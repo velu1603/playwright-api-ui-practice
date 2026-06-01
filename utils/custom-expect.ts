@@ -17,5 +17,18 @@ expect.extend({
       pass: false,
       message: () => `Expected ${received} to be a valid YYYY-MM-DD date`
     }
+  },
+  
+toBeNotNull(received: unknown) {
+    const pass = received !== null && received !== undefined
+
+    return {
+      pass,
+      message: () =>
+        pass
+          ? `Expected value to be null or undefined`
+          : `Expected value to be not null/undefined, but received: ${received}`,
+    }
   }
+
 })

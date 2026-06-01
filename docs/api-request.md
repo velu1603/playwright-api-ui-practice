@@ -88,8 +88,8 @@ The utility can be used in two ways:
 
 ### 1. As a Plain Function
 
-```typescript
-import { apiRequest } from '@seontechnologies/playwright-utils'
+
+import { apiRequest } from '@/playwright-utils'
 
 // Inside a test or another function
 const response = await apiRequest({
@@ -106,9 +106,9 @@ console.log(response.body) // Parsed response body
 
 ### 2. As a Playwright Fixture
 
-```typescript
+
 // Import the fixture
-import { test } from '@seontechnologies/playwright-utils/fixtures'
+import { test } from '/playwright-utils/fixtures'
 
 // Use the fixture in your tests
 test('should fetch user data', async ({ apiRequest }) => {
@@ -128,7 +128,7 @@ test('should fetch user data', async ({ apiRequest }) => {
 
 ### apiRequest Function
 
-```typescript
+
 async function apiRequest<T = unknown>({
   request,
   method,
@@ -163,7 +163,7 @@ async function apiRequest<T = unknown>({
 
 **retryConfig details (defaults):**
 
-```typescript
+
 {
   maxRetries: 3,
   initialDelayMs: 100,
@@ -194,7 +194,7 @@ When using the operation overload, the following parameters apply:
 
 **Mutually exclusive fields**: When using `operation`, you cannot pass `method` or `path` — they are extracted from the operation object. TypeScript enforces this at compile time.
 
-```typescript
+
 // The OperationShape structural type
 type OperationShape = {
   path: string
@@ -209,7 +209,7 @@ type OperationShape = {
 
 `apiRequest` returns an enhanced promise that resolves to a response with `status` and `body`, plus a chained `validateSchema()` helper.
 
-```typescript
+
 type ApiRequestResponse<T = unknown> = {
   status: number // HTTP status code
   body: T // Response body, typed as T
@@ -234,8 +234,8 @@ type EnhancedApiPromise<T = unknown> = Promise<EnhancedApiResponse<T>> & {
 
 ### GET Request with Authentication
 
-```typescript
-import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+import { test } from '/playwright-utils/fixtures'
 
 test('fetch user profile', async ({ apiRequest }) => {
   const { status, body } = await apiRequest<UserProfile>({
@@ -253,8 +253,8 @@ test('fetch user profile', async ({ apiRequest }) => {
 
 #### POST Request with Body
 
-```typescript
-import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+import { test } from '@/playwright-utils/fixtures'
 
 test('create new item', async ({ apiRequest }) => {
   const { status, body } = await apiRequest<CreateItemResponse>({
@@ -275,7 +275,7 @@ test('create new item', async ({ apiRequest }) => {
 
 ### Handling Query Parameters
 
-```typescript
+
 test('demonstrates query parameters', async ({ apiRequest }) => {
   // Query parameters are properly encoded
   const { status, body } = await apiRequest({
@@ -295,7 +295,7 @@ test('demonstrates query parameters', async ({ apiRequest }) => {
 
 By default, Playwright's request methods time out after 30 seconds. Pass `timeout` (in milliseconds) to override this for slow endpoints. Use `timeout: 0` to disable the timeout entirely. Negative values are ignored, falling back to Playwright's default.
 
-```typescript
+
 test('handles slow endpoint', async ({ apiRequest }) => {
   // Override Playwright's default 30s timeout for a slow endpoint
   const { status, body } = await apiRequest<ReportData>({
@@ -310,7 +310,7 @@ test('handles slow endpoint', async ({ apiRequest }) => {
 
 ### Handling Different Response Types
 
-```typescript
+
 test('handles different response types', async ({ apiRequest }) => {
   // JSON responses are automatically parsed
   const jsonResponse = await apiRequest<UserData>({
@@ -333,8 +333,8 @@ test('handles different response types', async ({ apiRequest }) => {
 
 ### Using in Non-Test Contexts (Global Setup, Helpers)
 
-```typescript
-import { apiRequest } from '@seontechnologies/playwright-utils'
+
+import { apiRequest } from '@/playwright-utils'
 import { request } from '@playwright/test'
 
 // For use in global setup or outside of test.step() contexts
@@ -367,7 +367,7 @@ The API Request utility includes automatic retry logic that follows Cypress patt
 
 ### Retry Configuration
 
-```typescript
+
 type ApiRetryConfig = {
   maxRetries?: number // Maximum retry attempts (default: 3)
   initialDelayMs?: number // Initial delay in ms (default: 100)
@@ -382,7 +382,7 @@ type ApiRetryConfig = {
 
 #### Default Retry Behavior
 
-```typescript
+
 test('automatic retry for server errors', async ({ apiRequest }) => {
   // Automatically retries 500, 502, 503, 504 errors
   // Never retries 4xx client errors (good for idempotency)
@@ -398,7 +398,7 @@ test('automatic retry for server errors', async ({ apiRequest }) => {
 
 #### Disable Retry for Error Testing
 
-```typescript
+
 test('test error handling without retry', async ({ apiRequest }) => {
   // Disable retry when you want to test error scenarios
   const { status } = await apiRequest({
@@ -413,7 +413,7 @@ test('test error handling without retry', async ({ apiRequest }) => {
 
 #### Custom Retry Configuration
 
-```typescript
+
 test('custom retry settings', async ({ apiRequest }) => {
   const { status } = await apiRequest({
     method: 'POST',
@@ -438,7 +438,7 @@ Following Cypress and HTTP best practices:
 - **4xx Client Errors** (400, 401, 403, 404, etc.): These indicate client-side issues (bad request, unauthorized, not found) that won't be resolved by retrying
 - **5xx Server Errors** (500, 502, 503, 504): These indicate temporary server issues that may resolve on retry
 
-```typescript
+
 test('demonstrates retry behavior', async ({ apiRequest }) => {
   // These will NOT be retried (fail fast for client errors)
   try {
@@ -501,12 +501,12 @@ The `validateSchema` function can be imported in multiple ways depending on your
 
 Use this when you need schema validation outside of Playwright test context, such as in helper utilities, global setup, or standalone scripts:
 
-```typescript
+
 import {
   validateSchema,
   detectSchemaFormat,
   ValidationError
-} from '@seontechnologies/playwright-utils/api-request/schema-validation'
+} from '@/playwright-utils/api-request/schema-validation'
 
 // Plain function signature: (data, schema, options)
 const result = await validateSchema(responseBody, MySchema, {
@@ -538,9 +538,9 @@ Use this within Playwright tests for seamless integration with test reporting.
 
 > **Note:** The fixture uses `(schema, data, options)` parameter order to match the chained API pattern.
 
-```typescript
+
 // Option A: Using merged fixtures (recommended)
-import { test } from '@seontechnologies/playwright-utils/fixtures'
+import { test } from '@/playwright-utils/fixtures'
 
 test('validate response', async ({ apiRequest, validateSchema }) => {
   const { body } = await apiRequest({ method: 'GET', path: '/api/data' })
@@ -549,10 +549,10 @@ test('validate response', async ({ apiRequest, validateSchema }) => {
 })
 ```
 
-```typescript
+
 // Option B: Using mergeTests with your own fixtures
 import { mergeTests } from '@playwright/test'
-import { test as validateSchemaFixture } from '@seontechnologies/playwright-utils/api-request/schema-validation'
+import { test as validateSchemaFixture } from '@/playwright-utils/api-request/schema-validation'
 import { test as myFixtures } from './my-fixtures'
 
 export const test = mergeTests(myFixtures, validateSchemaFixture)
@@ -566,8 +566,8 @@ test('validate response', async ({ validateSchema }) => {
 
 The most common pattern - chain `.validateSchema()` directly on apiRequest calls:
 
-```typescript
-import { test } from '@seontechnologies/playwright-utils/fixtures'
+
+import { test } from '@/playwright-utils/fixtures'
 
 test('chained validation', async ({ apiRequest }) => {
   const response = await apiRequest({
@@ -581,9 +581,9 @@ test('chained validation', async ({ apiRequest }) => {
 
 | Import Path                                                        | Type               | Use Case                          |
 | ------------------------------------------------------------------ | ------------------ | --------------------------------- |
-| `@seontechnologies/playwright-utils/api-request/schema-validation` | Plain function     | Helpers, utilities, non-test code |
-| `@seontechnologies/playwright-utils/fixtures`                      | Merged fixture     | Standard Playwright tests         |
-| `@seontechnologies/playwright-utils/api-request/fixtures`          | Standalone fixture | Custom `mergeTests` setups        |
+| `@/playwright-utils/api-request/schema-validation` | Plain function     | Helpers, utilities, non-test code |
+| `@/playwright-utils/fixtures`                      | Merged fixture     | Standard Playwright tests         |
+| `@/playwright-utils/api-request/fixtures`          | Standalone fixture | Custom `mergeTests` setups        |
 
 ### Quick Start - Schema Validation
 
@@ -591,8 +591,8 @@ Reduce 5-10 lines of manual validation to a single line with built-in schema val
 
 > **Note:** Examples below use the merged fixtures import. See [Import Options](#import-options) for all available import patterns including plain function usage.
 
-```typescript
-import { test, expect } from '@seontechnologies/playwright-utils/fixtures'
+
+import { test, expect } from '@/playwright-utils/fixtures'
 import { CreateMovieResponseSchema } from '../../../sample-app/shared/types/schema'
 
 test('schema validation basics', async ({
@@ -650,7 +650,7 @@ TypeScript note: schema validation verifies runtime shape but does not infer a c
 
 #### JSON Schema
 
-```typescript
+
 test('JSON Schema validation basics', async ({ apiRequest, authToken }) => {
   const movieData = {
     name: 'Test Movie',
@@ -711,7 +711,7 @@ test('JSON Schema validation basics', async ({ apiRequest, authToken }) => {
 })
 ```
 
-```typescript
+
 test('JSON Schema validation with awaited helper', async ({
   addMovie,
   authToken,
@@ -740,7 +740,7 @@ Both `.validateSchema()` and the standalone `validateSchema()` helper share the 
 - **Chained** — works great when you call `apiRequest()` directly and want a fluent API.
 - **Helper** — ideal when a fixture wraps `apiRequest()` (for example with `functionTestStep`) or when you already have the `{ status, body }` pair from another helper.
 
-```typescript
+
 // Chained style (fluent)
 const { body } = await apiRequest({
   method: 'GET',
@@ -761,7 +761,7 @@ await validateSchema(GetMovieResponseUnionSchema, body, {
 
 #### Zod Schema Integration
 
-```typescript
+
 import { CreateMovieResponseSchema } from '../../../sample-app/shared/types/schema'
 
 test('Zod schema validation with TypeScript inference', async ({
@@ -792,7 +792,7 @@ test('Zod schema validation with TypeScript inference', async ({
 })
 ```
 
-```typescript
+
 test('Zod schema validation with awaited helper', async ({
   getMovieById,
   authToken,
@@ -811,7 +811,7 @@ test('Zod schema validation with awaited helper', async ({
 
 #### OpenAPI Specification Support
 
-```typescript
+
 import openApiJson from '../../../sample-app/backend/src/api-docs/openapi.json'
 
 test('OpenAPI JSON specification validation', async ({
@@ -852,7 +852,7 @@ test('OpenAPI JSON specification validation', async ({
 
 When you want to assert on `validationResult`, capture the returned object from the helper:
 
-```typescript
+
 import openApiJson from '../../../sample-app/backend/src/api-docs/openapi.json'
 
 test('awaited OpenAPI JSON validation', async ({
@@ -881,7 +881,7 @@ test('awaited OpenAPI JSON validation', async ({
 })
 ```
 
-```typescript
+
 test('OpenAPI YAML file validation', async ({ apiRequest, authToken }) => {
   const response = await apiRequest({
     method: 'POST',
@@ -912,7 +912,7 @@ test('OpenAPI YAML file validation', async ({ apiRequest, authToken }) => {
 
 #### Schema-Only Validation (No Shape Assertions)
 
-```typescript
+
 import { GetMovieResponseUnionSchema } from '../../../sample-app/shared/types/schema'
 
 test('schema validation without shape assertions', async ({
@@ -941,7 +941,7 @@ test('schema validation without shape assertions', async ({
 })
 ```
 
-```typescript
+
 test('return mode validation with awaited helper', async ({
   apiRequest,
   authToken,
@@ -968,7 +968,7 @@ test('return mode validation with awaited helper', async ({
 
 #### Return Mode (Non-Throwing Validation)
 
-```typescript
+
 import { z } from 'zod'
 
 test('return mode validation - does not throw on failure', async ({
@@ -1010,7 +1010,7 @@ test('return mode validation - does not throw on failure', async ({
 
 #### Advanced Shape Validation with Functions
 
-```typescript
+
 import { CreateMovieResponseSchema } from '../../../sample-app/shared/types/schema'
 
 test('combined schema + shape validation with functions', async ({
@@ -1050,7 +1050,7 @@ test('combined schema + shape validation with functions', async ({
 })
 ```
 
-```typescript
+
 test('awaited helper with shape functions', async ({
   updateMovie,
   authToken,
@@ -1087,7 +1087,7 @@ If your project uses a code generator (custom scripts, [orval](https://orval.dev
 
 When using generated operation helpers with the classic `apiRequest` signature, every call requires manual extraction and `typeof` assertions:
 
-```typescript
+
 // Verbose: repeated in every test across every file
 const upsertPerson = upsertPersonv2({ customerId })
 
@@ -1111,7 +1111,7 @@ const { body } = await apiRequest<typeof getPeople.response>({
 
 Pass the operation object directly via the `operation` field. TypeScript infers all types automatically — no explicit generic parameter, no manual `method`/`path` extraction:
 
-```typescript
+
 // Clean: types fully inferred from the operation
 const { status, body } = await apiRequest({
   operation: upsertPersonv2({ customerId }),
@@ -1134,7 +1134,7 @@ Both overloads coexist — the classic `method`/`path` signature continues to wo
 
 The operation overload uses **structural typing** (duck typing). Your operation objects just need to match this shape — no imports from `playwright-utils` required in your generator:
 
-```typescript
+
 type OperationShape = {
   path: string
   method: 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD'
@@ -1150,8 +1150,8 @@ Any code generator that produces objects with this shape will get full type infe
 
 #### GET Request with Operation
 
-```typescript
-import { test, expect } from '@seontechnologies/playwright-utils/fixtures'
+
+import { test, expect } from '@/playwright-utils/fixtures'
 
 test('fetch people list', async ({ apiRequest }) => {
   const { status, body } = await apiRequest({
@@ -1168,7 +1168,7 @@ test('fetch people list', async ({ apiRequest }) => {
 
 #### POST/PUT with Typed Body
 
-```typescript
+
 test('create person', async ({ apiRequest }) => {
   const { status, body } = await apiRequest({
     operation: upsertPersonv2({ customerId: 123 }),
@@ -1186,7 +1186,7 @@ test('create person', async ({ apiRequest }) => {
 
 When the operation defines a `query` type, use the `query` field for type-safe parameters. They are serialized to bracket-notation query strings automatically:
 
-```typescript
+
 test('search with typed query', async ({ apiRequest }) => {
   const { body } = await apiRequest({
     operation: getPeoplev2({ customerId: 123 }),
@@ -1201,7 +1201,7 @@ test('search with typed query', async ({ apiRequest }) => {
 
 Nested objects and arrays are serialized using bracket notation:
 
-```typescript
+
 query: {
   filters: {
     hits: ['sanctions', 'pep']
@@ -1214,7 +1214,7 @@ query: {
 
 The built-in query serializer uses best-effort bracket notation. If your API requires a different format, or the generated query type is incomplete, use the `params` escape hatch alongside `operation`:
 
-```typescript
+
 test('mixed query strategies', async ({ apiRequest }) => {
   const { body } = await apiRequest({
     operation: getPeoplev2({ customerId: 123 }),
@@ -1232,7 +1232,7 @@ When `query` and `params` are both provided, serialized `query` entries are merg
 
 The `.validateSchema()` chain works identically with operation-based calls:
 
-```typescript
+
 test('operation + schema validation', async ({ apiRequest }) => {
   const { status, body } = await apiRequest({
     operation: upsertPersonv2({ customerId: 123 }),
@@ -1268,7 +1268,7 @@ If your API requires a different serialization style (e.g., comma-separated arra
 
 Migrating from the classic pattern to the operation overload:
 
-```typescript
+
 // Step 1: Remove the intermediate variable and typeof
 // BEFORE
 const op = upsertPersonv2({ customerId })
@@ -1287,7 +1287,7 @@ const { body } = await apiRequest({
 })
 ```
 
-```typescript
+
 // Step 2: Replace string concatenation with typed query
 // BEFORE
 const op = getPeoplev2({ customerId })
@@ -1328,14 +1328,14 @@ Enables rich visual feedback for API requests in Playwright UI with formatted re
 
 **Environment Variable (Recommended):**
 
-```typescript
+
 // In config or at top of test file
 process.env.API_E2E_UI_MODE = 'true'
 ```
 
 **Per-Request:**
 
-```typescript
+
 const response = await apiRequest({
   method: 'GET',
   path: '/api/movies',
@@ -1345,7 +1345,7 @@ const response = await apiRequest({
 
 ### Example
 
-```typescript
+
 process.env.API_E2E_UI_MODE = 'true'
 
 test('API test with UI display', async ({ apiRequest }) => {
@@ -1365,7 +1365,7 @@ test('API test with UI display', async ({ apiRequest }) => {
 
 The API request utility shines when used with fixtures for CRUD operations. This example shows a real implementation using proper typing and a functional approach:
 
-```typescript
+
 // From playwright/support/fixtures/crud-helper-fixture.ts
 export const test = baseApiRequestFixture.extend<CrudParams>({
   // Create movie API fixture with proper typing
@@ -1423,7 +1423,7 @@ export const test = baseApiRequestFixture.extend<CrudParams>({
 
 Real examples showing both approaches from the CRUD tests:
 
-```typescript
+
 // From playwright/tests/sample-app/backend/crud-movie-event.spec.ts
 test('should perform CRUD operations with schema validation', async ({
   addMovie,
@@ -1549,7 +1549,7 @@ This approach offers several advantages aligned with SEON's development principl
 
 The API request utility works seamlessly with the Auth Session manager:
 
-```typescript
+
 test('should use cached auth token', async ({
   apiRequest,
   authToken // From auth session fixture
@@ -1572,7 +1572,7 @@ test('should use cached auth token', async ({
 
 Combining with the `recurse` utility for polling async operations:
 
-```typescript
+
 test('should wait for resource creation', async ({
   apiRequest,
   authToken,

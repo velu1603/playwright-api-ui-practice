@@ -1,13 +1,13 @@
 /**********************************
  * Schema Registry Pattern
  * Create a contract registry
- * Use it in your tests/helpers
+ * Use it in my tests/helpers
  * 
  *  All contracts live in one place:
  * ✅ Easy refactoring
  * ✅ Cleaner tests
  * 
- * Future enhancements: 
+ * Future enhancements: ==> I will think about it 🤔
  * export const apiContracts = {
                 '/booking:POST': createBookingSchema,
                 '/booking/:id:GET': bookingDetailsSchema,

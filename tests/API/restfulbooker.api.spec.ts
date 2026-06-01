@@ -27,10 +27,10 @@ test.describe("🧪 Restful-booker API testing", () => {
       uiMode: true,
       testStep: true,
       retryConfig:{
-      maxRetries: 3,
-      initialDelayMs: 500,
-      maxDelayMs: 10000,
-      enableJitter: true
+        maxRetries: 3,
+        initialDelayMs: 500,
+        maxDelayMs: 10000,
+        enableJitter: true
     }
     });
     expect(resp.status, `Response should be ${resp.status}`).toBe(201);
@@ -67,10 +67,10 @@ test.describe("🧪 Restful-booker API testing", () => {
       uiMode: true,
       body: body,
       retryConfig:{
-      maxRetries: 3,
-      initialDelayMs: 500,
-      maxDelayMs: 10000,
-      enableJitter: true
+        maxRetries: 3,
+        initialDelayMs: 500,
+        maxDelayMs: 10000,
+        enableJitter: true
     }
     }).validateSchema(createBookingSchema);
 
@@ -170,8 +170,8 @@ test.describe("🧪 Restful-booker API testing", () => {
       updated.body.bookingdates,
       `Updated booking dates match`,
     ).toMatchObject(updateData.bookingdates);
-    //expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`).toBeValidDateFormat()
-    //expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
+    expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`).toBeValidDateFormat()
+    expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
   });
 
   test("✅ Mixed dynamic update", async ({ apiClient }) => {
