@@ -16,11 +16,13 @@ import {
 import { getDynamicUpdatePayload } from "../../data/updated-Payload";
 import { updateFactory } from "../../data/update-factory";
 import { bookingFactory } from "../../data/booking-factory";
+import { getLogger } from '../../utils/logger'
 
 test.describe("🧪 Restful-booker API testing", () => {
   test("✅ Ping HealthCheck check to confirm API is up and running. ", async ({
     apiClient,
   }) => {
+     await getLogger().info("Starting test")
     const resp = await apiClient({
       method: "GET",
       path: "/ping",
@@ -33,6 +35,7 @@ test.describe("🧪 Restful-booker API testing", () => {
         enableJitter: true
     }
     });
+     await getLogger().success(`Status is ${resp.status}`)
     expect(resp.status, `Response should be ${resp.status}`).toBe(201);
   });
   test("✅ GET all bookings", async ({ apiClient }) => {

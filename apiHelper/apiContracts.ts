@@ -47,12 +47,7 @@
 
             expect(response.status).toBe(200)
             })
-* 
-* 
-* 
-* 
-* 
-* 
+
 */
 
 import {
