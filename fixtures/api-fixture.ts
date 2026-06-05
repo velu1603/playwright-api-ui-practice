@@ -236,3 +236,25 @@ export const test = base.extend<Fixtures>({
 })
 
 export { expect }
+
+/*
+  Flow : 
+
+Test
+ ↓
+apiClient (fixture)
+ ↓
+Handles auth + tokens
+ ↓
+apiRequest (engine)
+ ↓
+Retry + parsing + logging
+ ↓
+Typed + validated response
+
+This fixture is like a smart API assistant—it knows how to authenticate, retry,
+and fix issues before the test even notice
+
+We’ve abstracted all API complexity—authentication, retries, 
+and token management—into a single reusable client, so tests can focus purely on validation.
+*/

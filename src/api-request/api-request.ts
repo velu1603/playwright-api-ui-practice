@@ -402,7 +402,7 @@ const apiRequestBase = async <T = unknown>({
     //   }
     // }
 
-    const responseBody = await parseResponseBody();
+    const responseBody = await parseResponseBody(); // We safely handle all response types.
 
     // Display UI if uiMode is enabled or environment variable is set
     if (uiMode || shouldDisplayApiUI()) {
@@ -681,3 +681,14 @@ const joinUrlParts = (base: string, path: string): string => {
 
   return `${normalizedBase}${normalizedPath}`;
 };
+
+/* 
+
+Test → apiRequest → Retry Logic → Playwright Request
+        ↓
+   Safe Parsing     -> We safely handle all response types (empty response , JSON, invalid json, text)
+        ↓
+   Optional UI Display
+        ↓
+   Enhanced Response (with validation) -> We extend the response so it supports schema validation and strong typing
+*/
