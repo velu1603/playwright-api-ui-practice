@@ -29,6 +29,23 @@ const AUTH_REQUIRED_METHODS = ['PUT', 'PATCH', 'DELETE']
    ✅ TYPES
 ============================================================ */
 
+
+
+/**
+ * TypeScript type definition that builds a new type (ApiClientOptions) by modifying an existing one (ApiRequestParams). 
+     It creates a new type that:
+      Takes all properties from ApiRequestParams
+      Removes three specific properties:
+
+      request
+      configBaseUrl
+      page
+
+      Adds two optional properties:
+
+      key?: string
+      authType?: 'cookie' | 'bearer' | 'basic' | 'none'
+ */
 type ApiClientOptions = Omit<
   ApiRequestParams,
   'request' | 'configBaseUrl' | 'page'
@@ -36,7 +53,12 @@ type ApiClientOptions = Omit<
   key?: string
   authType?: 'cookie' | 'bearer' | 'basic' | 'none'
 }
-
+/**
+ * ApiClient is a function that takes API request options and returns a promise-like result containing data of type T.
+     It describes a function that:
+        takes one argument
+        returns a promise-like value
+ */
 type ApiClient = <T = unknown>(
   options: ApiClientOptions
 ) => EnhancedApiPromise<T>

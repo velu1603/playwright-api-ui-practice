@@ -29,7 +29,7 @@ test.describe("🧪 Restful-booker API testing", () => {
       uiMode: true,
       testStep: true,
       retryConfig:{
-        maxRetries: 3,
+        maxRetries: 4,
         initialDelayMs: 500,
         maxDelayMs: 10000,
         enableJitter: true

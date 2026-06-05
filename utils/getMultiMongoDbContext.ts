@@ -7,12 +7,14 @@
  * This works similar to SQL joins — but instead of querying the database multiple times, 
  * we preload collections into memory and join them efficiently using Maps.
  * 
+ * The DBs are not physically connected. They are lined using IDs like citizenId , claimantId logically
+ * 
  *  Source Data (Collection A)
-        ↓
+        ↓ IDs
     Join with Collection B (Map lookup)
-        ↓
+        ↓ IDs
     Join with Collection C
-        ↓
+        ↓ IDs
     Final enriched test context
  * 
  * Instead of searching arrays (O(n)), we use Maps for O(1) lookups, making joins very efficient.

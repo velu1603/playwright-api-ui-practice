@@ -15,21 +15,58 @@ import {
   type EnhancedApiPromise,
 } from "../api-request/schema-validation/internal/promise-extension";
 
-/** Retry configuration for API requests (like Cypress - only retries 5xx server errors, never 4xx client errors) */
+/** Retry configuration for API requests (like Cypress - only retries 5xx server errors, never 4xx client errors)
+ * 
+      {
+        initialDelayMs: 100,
+        backoffMultiplier: 2,
+        maxDelayMs: 5000,
+        enableJitter: true
+      }
+
+    Retry timeline
+      
+          Retry 1 → ~100ms (+/- jitter)
+          Retry 2 → ~200ms
+          Retry 3 → ~400ms
+          Retry 4 → ~800ms
+          Retry 5 → ~1600ms
+          ... capped at 5000ms
+
+ * 
+ */
 export type ApiRetryConfig = {
   /** Maximum number of retry attempts for server errors (default: 3) */
   maxRetries?: number;
-  /** Initial delay between retries in milliseconds (default: 100ms) */
+  /** Initial delay between retries in milliseconds (default: 100ms) e.g.Request fails → wait 100ms → retry #1
+   * Prevents immediate retry spam /Gives the server time to recover */
   initialDelayMs?: number;
-  /** Exponential backoff multiplier (default: 2) */
+  /** Exponential backoff multiplier (default: 2) 
+   * Controls how the delay increases after each retry
+   * Example (multiplier = 2)
+      Retry 1 → 100ms
+      Retry 2 → 200ms
+      Retry 3 → 400ms
+      Retry 4 → 800ms
+      Avoids hammering the server and Handles transient issues gracefully
+  */
   backoffMultiplier?: number;
-  /** Maximum delay between retries in milliseconds (default: 5000ms) */
+  /** Maximum delay between retries in milliseconds (default: 5000ms) 
+   * Caps the maximum delay between retries
+   * example: Retry delay reaches 8000ms ❌ , Capped at 5000ms ✅
+   * Prevents excessively long waits and Keeps retries predictable
+  */
   maxDelayMs?: number;
-  /** Whether to add random jitter to delays (default: true) */
+  /** Whether to add random jitter to delays (default: true) , Prevents “thundering herd problem”
+   * Adds randomness to the delay
+   * Without jitter: All clients retry at exactly 200ms ❌
+   * With jitter: Client A → 180ms, Client B → 230ms , Client C → 210ms
+  */
   enableJitter?: boolean;
   /** Which status codes to retry (default: [500, 502, 503, 504] - only 5xx server errors) */
   retryStatusCodes?: number[];
 };
+
 
 /** Custom error type for API request failures */
 export class ApiRequestError extends Error {
@@ -133,7 +170,7 @@ const DEFAULT_RETRY_CONFIG: Required<ApiRetryConfig> = {
   initialDelayMs: 100,
   backoffMultiplier: 2,
   maxDelayMs: 5000,
-  enableJitter: true,
+  enableJitter: true, // Prevents “thundering herd problem”
   retryStatusCodes: [500, 502, 503, 504], // Only 5xx server errors (transient issues), never 4xx client errors
 };
 

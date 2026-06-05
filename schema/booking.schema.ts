@@ -7,7 +7,6 @@ import { z } from "zod";
 export const bookingDatesSchema = z.object({
   checkin: z.string(),
   checkout: z.string(),
-  //checkedIn: z.string()
 }).strict();
 
 export const bookingDetailsSchema = z
@@ -43,6 +42,11 @@ export const getAllBookingsSchema = z.array(bookingIdSchema).min(1);
 /* ============================================================
    ✅ TYPE GENERATION (Auto ✅)
 ============================================================ */
+
+// type ... = → creates a TypeScript type
+// typeof schema → gets the schema’s type 
+// z.infer<...> → converts schema → TypeScript type
+// z.infer turns your Zod schema into a TypeScript type so we don’t have to write it twice.
 
 export type Booking = z.infer<typeof bookingDetailsSchema>;
 

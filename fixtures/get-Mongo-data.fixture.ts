@@ -3,10 +3,10 @@ import { getDataFromMongo } from '../utils/getDateFromMongoCollection'
 
 
 type ClaimData = {
-  nino: string;
+  nino: string;    // Map NINO -> GUID - pass it the test for Get the record
   citizenId: string;
-  status: string;
-  jointClaim: boolean;
+  status: string;   // Map citizenId -> claimantId and get the status : 'IN_PAYMENT' || 'CLOSED'
+  jointClaim: boolean;  // Map citizenId -> claimantid , returns true ? false 
   paymentAmount?: number;
 };
 
