@@ -18,7 +18,7 @@ import { updateFactory } from "../../data/update-factory";
 import { bookingFactory } from "../../data/booking-factory";
 import { getLogger } from '../../utils/logger'
 
-test.describe("🧪 Restful-booker API testing", () => {
+test.describe("🧪 Restful-booker API testing for practice", () => {
   test("✅ Ping HealthCheck check to confirm API is up and running. ", async ({
     apiClient,
   }) => {
