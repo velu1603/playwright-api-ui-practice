@@ -1,7 +1,10 @@
-import { test as base, expect } from '@playwright/test'
-import { apiRequest, type ApiRequestParams } from '../src/api-request/api-request'
-import type { EnhancedApiPromise } from '../src/api-request/schema-validation/internal/promise-extension'
-import '../utils/custom-expect'
+import { test as base, expect } from "@playwright/test";
+import {
+  apiRequest,
+  type ApiRequestParams,
+} from "../src/api-request/api-request";
+import type { EnhancedApiPromise } from "../src/api-request/schema-validation/internal/promise-extension";
+import "../utils/custom-expect";
 
 /* ===========================================================================================
    ✅ FRAMEWORK OVERVIEW
@@ -19,20 +22,19 @@ import '../utils/custom-expect'
    ✅ CONSTANTS
 ============================================================ */
 
-const BASIC_AUTH_HEADER = `Basic ${Buffer
-  .from(`${process.env.API_USERNAME}:${process.env.API_PASSWORD}`)
-  .toString('base64')}`
+const BASIC_AUTH_HEADER = `Basic ${Buffer.from(
+  `${process.env.API_USERNAME}:${process.env.API_PASSWORD}`,
+).toString("base64")}`;
 
-const AUTH_REQUIRED_METHODS = ['PUT', 'PATCH', 'DELETE']
+const AUTH_REQUIRED_METHODS = ["PUT", "PATCH", "DELETE"];
 
 /* ============================================================
    ✅ TYPES
 ============================================================ */
 
-
-
 /**
- * TypeScript type definition that builds a new type (ApiClientOptions) by modifying an existing one (ApiRequestParams). 
+ * TypeScript type definition that builds a new type (ApiClientOptions) by modifying an
+       existing one (ApiRequestParams). 
      It creates a new type that:
       Takes all properties from ApiRequestParams
       Removes three specific properties:
@@ -48,11 +50,11 @@ const AUTH_REQUIRED_METHODS = ['PUT', 'PATCH', 'DELETE']
  */
 type ApiClientOptions = Omit<
   ApiRequestParams,
-  'request' | 'configBaseUrl' | 'page'
+  "request" | "configBaseUrl" | "page"
 > & {
-  key?: string
-  authType?: 'cookie' | 'bearer' | 'basic' | 'none'
-}
+  key?: string;
+  authType?: "cookie" | "bearer" | "basic" | "none";
+};
 /**
  * ApiClient is a function that takes API request options and returns a promise-like result containing data of type T.
      It describes a function that:
@@ -60,101 +62,98 @@ type ApiClientOptions = Omit<
         returns a promise-like value
  */
 type ApiClient = <T = unknown>(
-  options: ApiClientOptions
-) => EnhancedApiPromise<T>
+  options: ApiClientOptions,
+) => EnhancedApiPromise<T>;
 
 type Fixtures = {
-  apiClient: ApiClient
-  authToken: string
-}
+  apiClient: ApiClient;
+  authToken: string;
+};
 
 /* ============================================================
    ✅ TOKEN MANAGER
 ============================================================ */
 
-let cachedToken: string | null = null
-let tokenExpiry = 0
+let cachedToken: string | null = null;
+let tokenExpiry = 0;
 
 const getAuthToken = async (request: any): Promise<string> => {
-  const now = Date.now()
+  const now = Date.now();
 
   if (cachedToken && now < tokenExpiry) {
-    return cachedToken
+    return cachedToken;
   }
 
   if (!process.env.API_USERNAME || !process.env.API_PASSWORD) {
-  throw new Error('Missing API credentials (API_USERNAME/API_PASSWORD)')
-}
+    throw new Error("Missing API credentials (API_USERNAME/API_PASSWORD)");
+  }
   const res = await apiRequest<{ token: string }>({
     request,
     configBaseUrl: process.env.API_BASE_URL,
-    method: 'POST',
-    path: '/auth',
-    headers: {"Content-Type": "application/json",
-      "Accept": "application/json"
-    },
+    method: "POST",
+    path: "/auth",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: {
       username: process.env.API_USERNAME?.trim(),
-      password: process.env.API_PASSWORD?.trim()
-    }
-  })
+      password: process.env.API_PASSWORD?.trim(),
+    },
+  });
 
-const token = res.body?.token
+  const token = res.body?.token;
 
   if (!token) {
-    throw new Error(`Auth token not generated. Response is ${JSON.stringify(res.body)}`)
+    throw new Error(
+      `Auth token not generated. Response is ${JSON.stringify(res.body)}`,
+    );
   }
 
-  cachedToken = token
-  tokenExpiry = Date.now() + 10 * 60 * 1000
+  cachedToken = token;
+  tokenExpiry = Date.now() + 10 * 60 * 1000;
 
-  return token
-}
+  return token;
+};
 
 /* ============================================================
    ✅ FIXTURE
 ============================================================ */
 
 export const test = base.extend<Fixtures>({
-
   apiClient: async ({ request, page }, use) => {
-
     const client: ApiClient = <T = unknown>(options: ApiClientOptions) => {
-
-      let authType = options.authType
+      let authType = options.authType;
 
       // ✅ AUTO AUTH DETECTION
       if (!authType) {
         if (AUTH_REQUIRED_METHODS.includes(options.method.toUpperCase())) {
-          authType = 'cookie' // try cookie first ✅
+          authType = "cookie"; // try cookie first ✅
         } else {
-          authType = 'none'
+          authType = "none";
         }
       }
 
       let headers: Record<string, string> = {
-        ...(options.headers || {})
-      }
+        ...(options.headers || {}),
+      };
 
       /* ----------------------------------------------------
          ✅ AUTH: NONE
       ----------------------------------------------------- */
-      if (authType === 'none') {
+      if (authType === "none") {
         return apiRequest<T>({
           request,
           configBaseUrl: process.env.API_BASE_URL,
           page,
           ...options,
-          headers
-        })
+          headers,
+        });
       }
 
       /* ----------------------------------------------------
          ✅ AUTH: BASIC
       ----------------------------------------------------- */
-      if (authType === 'basic') {
-        if (!headers['Authorization']) {
-          headers['Authorization'] = BASIC_AUTH_HEADER
+      if (authType === "basic") {
+        if (!headers["Authorization"]) {
+          headers["Authorization"] = BASIC_AUTH_HEADER;
         }
 
         return apiRequest<T>({
@@ -162,23 +161,23 @@ export const test = base.extend<Fixtures>({
           configBaseUrl: process.env.API_BASE_URL,
           page,
           ...options,
-          headers
-        })
+          headers,
+        });
       }
 
       /* ----------------------------------------------------
          ✅ AUTH: COOKIE / BEARER + FALLBACK
       ----------------------------------------------------- */
 
-      let effectiveHeaders = { ...headers }
+      let effectiveHeaders = { ...headers };
 
       if (cachedToken) {
-        if (authType === 'cookie' && !headers['Cookie']) {
-          effectiveHeaders['Cookie'] = `token=${cachedToken}`
+        if (authType === "cookie" && !headers["Cookie"]) {
+          effectiveHeaders["Cookie"] = `token=${cachedToken}`;
         }
 
-        if (authType === 'bearer' && !headers['Authorization']) {
-          effectiveHeaders['Authorization'] = `Bearer ${cachedToken}`
+        if (authType === "bearer" && !headers["Authorization"]) {
+          effectiveHeaders["Authorization"] = `Bearer ${cachedToken}`;
         }
       }
 
@@ -187,55 +186,52 @@ export const test = base.extend<Fixtures>({
         configBaseUrl: process.env.API_BASE_URL,
         page,
         ...options,
-        headers: effectiveHeaders
-      })
+        headers: effectiveHeaders,
+      });
 
       // ✅ refresh token if needed
       if (!cachedToken || Date.now() >= tokenExpiry) {
-        getAuthToken(request).catch(() => {})
+        getAuthToken(request).catch(() => {});
       }
 
       // ✅ FALLBACK: cookie → basic
       return initialRequest.then((response: any) => {
-
         if (
-          authType === 'cookie' &&
+          authType === "cookie" &&
           (response.status === 401 || response.status === 403)
         ) {
           const fallbackHeaders = {
             ...(options.headers || {}),
-            Authorization: BASIC_AUTH_HEADER
-          }
+            Authorization: BASIC_AUTH_HEADER,
+          };
 
           return apiRequest<T>({
             request,
             configBaseUrl: process.env.API_BASE_URL,
             page,
             ...options,
-            headers: fallbackHeaders
-          })
+            headers: fallbackHeaders,
+          });
         }
 
-        return response
+        return response;
+      }) as EnhancedApiPromise<T>;
+    };
 
-      }) as EnhancedApiPromise<T>
-    }
-
-    await use(client)
+    await use(client);
   },
 
   /* --------------------------------------------------------
      ✅ TOKEN FIXTURE
   --------------------------------------------------------- */
   authToken: async ({ request }, use) => {
-    const token = await getAuthToken(request)
-    cachedToken = token
-    await use(token)
-  }
+    const token = await getAuthToken(request);
+    cachedToken = token;
+    await use(token);
+  },
+});
 
-})
-
-export { expect }
+export { expect };
 
 /*
   Flow : 
