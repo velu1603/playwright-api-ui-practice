@@ -5,7 +5,7 @@
  */
 
 import { test, type Page } from "@playwright/test";
-import { getLogger } from "../../utils/logger";
+import { getLogger } from "../internal";
 
 /** Request data interface for UI display */
 export interface RequestDataInterface {
@@ -66,8 +66,11 @@ export const addApiCardToUI = async (
       const stepName = `${statusIcon} Schema Validation (${schemaFormat})`;
 
       await test.step(stepName, async () => {
+        // Create a new page/tab for validation results
         const newPage = await page.context().newPage();
         await newPage.setContent(html);
+
+        // Optional: Bring the new tab to front
         await newPage.bringToFront();
       });
     } else {
@@ -108,71 +111,68 @@ const createApiCallHtml = async (
 ): Promise<string> => {
   const callId = Math.floor(10000000 + Math.random() * 90000000);
 
-  // ✅ NEW: Clean schema display
+  // NEW: Clean schema display
   const schemaDisplay = responseData.validationResult?.schemaInfo?.includes(
     "zod",
   )
-    ? "✅ Zod schema validated successfully"
+    ? `✅ Schema Validation Passed
+Schema Type: Zod
+Validation Status: Success`
     : formatJson(responseData.validationResult?.schema ?? {});
 
   // Add validation results section if present
   const validationSection = responseData.validationResult
     ? `
-        <hr>
-        <div class="pw-api-validation">
-            <label class="title">${responseData.validationResult.icon} SCHEMA VALIDATION - </label>
-            <label class="title-property">${responseData.validationResult.summary}</label>
-            <br>
-            <label class="property">Schema Info:</label> ${responseData.validationResult.schemaInfo}
-            ${
-              responseData.validationResult.schema
-                ? `
-                    <div class="pw-val-data-tabs-${callId} pw-data-tabs">
-                        ${await createValidationTab(
-                          responseData.validationResult.errors &&
-                            responseData.validationResult.errors.length > 0
-                            ? `<div style="color: #d00;">
-                                <strong>❌ Validation Failed - ${responseData.validationResult.errors.length} error(s):</strong>
-                                <ul style="margin: 10px 0; padding-left: 20px;">
-                                    ${responseData.validationResult.errors.map((err) => `<li>${err}</li>`).join("")}
-                                </ul>
-                              </div>`
-                            : '<span style="color: #0d0; font-weight: bold;">PASS ✅ All validations passed successfully</span>',
-                          "VALIDATION RESULT",
-                          callId,
-                          true,
-                        )}
-                        ${await createValidationTab(
-                          //formatJson(responseData.validationResult.schema),
-                          schemaDisplay,
-                          "SCHEMA",
-                          callId,
-                        )}
-                    </div>
-                  `
-                : responseData.validationResult.errors &&
-                    responseData.validationResult.errors.length > 0
-                  ? `
-                      <br><br>
-                      <label class="property">Validation Errors:</label>
-                      <div class="pw-validation-errors" style="background: #ffe6e6; border-left: 4px solid #ff0000; padding: 10px; margin-top: 10px;">
-                          <ul style="margin: 0; padding-left: 20px;">
-                              ${responseData.validationResult.errors.map((err) => `<li style="color: #d00;">${err}</li>`).join("")}
-                          </ul>
-                      </div>
-                    `
-                  : '<br><span style="color: #0d0;">✓ All validations passed</span>'
-            }
-        </div>
-      `
+<hr>
+<div class="pw-api-validation">
+<label class="title">${responseData.validationResult.icon} SCHEMA VALIDATION - </label>
+<label class="title-property">${responseData.validationResult.summary}</label>
+<br>
+<label class="property">Schema Info:</label> ${responseData.validationResult.schemaInfo}
+${
+  responseData.validationResult.schema
+    ? `
+<div class="pw-val-data-tabs-${callId} pw-data-tabs">
+${await createValidationTab(
+  responseData.validationResult.errors &&
+    responseData.validationResult.errors.length > 0
+    ? `<div style="color: #d00;">
+<strong>❌ Validation Failed - ${responseData.validationResult.errors.length} error(s):</strong>
+<ul style="margin: 10px 0; padding-left: 20px;">
+${responseData.validationResult.errors.map((err) => `<li>${err}</li>`).join("")}
+</ul>
+</div>`
+    : '<span style="color: #0d0; font-weight: bold;">PASS ✅ All validations passed successfully</span>',
+  "VALIDATION RESULT",
+  callId,
+  true,
+)}
+${await createValidationTab(schemaDisplay, "SCHEMA", callId)}
+</div>
+`
+    : responseData.validationResult.errors &&
+        responseData.validationResult.errors.length > 0
+      ? `
+<br><br>
+<label class="property">Validation Errors:</label>
+<div class="pw-validation-errors" style="background: #ffe6e6; border-left: 4px solid #ff0000; padding: 10px; margin-top: 10px;">
+<ul style="margin: 0; padding-left: 20px;">
+${responseData.validationResult.errors.map((err) => `<li style="color: #d00;">${err}</li>`).join("")}
+</ul>
+</div>
+`
+      : '<br><span style="color: #0d0;">✓ All validations passed</span>'
+}
+</div>
+`
     : "";
 
   return `<div class="pw-api-call pw-card">
-        ${await createApiCallHtmlRequest(requestData, callId)}
-        <hr>
-        ${await createApiCallHtmlResponse(responseData, callId)}
-        ${validationSection}
-    </div>`;
+${await createApiCallHtmlRequest(requestData, callId)}
+<hr>
+${await createApiCallHtmlResponse(responseData, callId)}
+${validationSection}
+</div>`;
 };
 
 /**
@@ -192,24 +192,42 @@ const createApiCallHtmlRequest = async (
     : undefined;
 
   return `<div class="pw-api-request">
-        <label class="title">REQUEST - </label>
-        <label class="title-property">(METHOD: ${method.toUpperCase()})</label>
-        <br>
+<label class="title">REQUEST - </label>
+<label class="title-property">(METHOD: ${method.toUpperCase()})</label>
+<br>
 
-        <label class="property">URL</label>
-        <pre class="hljs pw-api-hljs">${url}</pre>
-        <div class="pw-req-data-tabs-${callId} pw-data-tabs">
-            ${await createRequestTab(requestBody, "BODY", callId, true)}
-            ${await createRequestTab(requestHeaders, "HEADERS", callId)}
-            ${await createRequestTab(requestParams, "PARAMS", callId)}
-            ${await createRequestTab(requestOtherOptions, "OTHER OPTIONS", callId)}
-        </div>
-    </div>`;
+<label class="property">URL</label>
+<pre class="hljs pw-api-hljs">${url}</pre>
+<div class="pw-req-data-tabs-${callId} pw-data-tabs">
+${await createRequestTab(requestBody, "BODY", callId, true)}
+${await createRequestTab(requestHeaders, "HEADERS", callId)}
+${await createRequestTab(requestParams, "PARAMS", callId)}
+${await createRequestTab(requestOtherOptions, "OTHER OPTIONS", callId)}
+</div>
+</div>`;
 };
 
 /**
  * Creates HTML for a request tab
  */
+// const createRequestTab = async (
+// data: any,
+// tabLabel: string,
+// callId: number,
+// checked?: boolean
+// ): Promise<string> => {
+// if (data === undefined) return ''
+
+// const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, '-')
+// return `<input type="radio" name="pw-req-data-tabs-${callId}" id="pw-req-${tabLabelForId}-${callId}" ${
+// checked ? 'checked="checked"' : ''
+// }>
+// <label for="pw-req-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
+// <div class="pw-tab-content">
+// <pre class="hljs" id="req-${tabLabelForId}-${callId}" data-tab-type="req-${tabLabelForId}">${data}</pre>
+// </div>`
+// }
+
 const createRequestTab = async (
   data: any,
   tabLabel: string,
@@ -219,15 +237,39 @@ const createRequestTab = async (
   if (data === undefined) return "";
 
   const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, "-");
-  return `<input type="radio" name="pw-req-data-tabs-${callId}" id="pw-req-${tabLabelForId}-${callId}" ${
-    checked ? 'checked="checked"' : ""
-  }>
-        <label for="pw-req-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
-        <div class="pw-tab-content">
-           <pre class="hljs" id="req-${tabLabelForId}-${callId}" data-tab-type="req-${tabLabelForId}">${data}</pre>
-        </div>`;
-};
+  const contentId = `req-${tabLabelForId}-${callId}`;
 
+  return `
+<input
+type="radio"
+name="pw-req-data-tabs-${callId}"
+id="pw-req-${tabLabelForId}-${callId}"
+${checked ? 'checked="checked"' : ""}
+>
+
+<label
+for="pw-req-${tabLabelForId}-${callId}"
+class="property pw-tab-label">
+${tabLabel.toUpperCase()}
+</label>
+
+<div class="pw-tab-content">
+
+<div class="pw-copy-container">
+<button
+class="pw-copy-btn"
+onclick="copyToClipboard('${contentId}', this)">
+📋 Copy Content
+</button>
+</div>
+
+<pre
+class="hljs"
+id="${contentId}"
+data-tab-type="req-${tabLabelForId}">${data}</pre>
+
+</div>`;
+};
 /**
  * Generates HTML for the response section
  */
@@ -246,20 +288,38 @@ const createApiCallHtmlResponse = async (
     : "";
 
   return `<div class="pw-api-response">
-        <label class="title">RESPONSE - </label>
-        <label class="title-property pw-api-${statusClass}">(STATUS: ${status} - ${statusText})</label>
-        <label class="title-property"> - ${durationMsg}</label>
-        <br>
-        <div class="pw-res-data-tabs-${callId} pw-data-tabs">
-            ${await createResponseTab(responseBody, "BODY", callId, true)}
-            ${await createResponseTab(responseHeaders, "HEADERS", callId)}
-         </div>
-    </div>`;
+<label class="title">RESPONSE - </label>
+<label class="title-property pw-api-${statusClass}">(STATUS: ${status} - ${statusText})</label>
+<label class="title-property"> - ${durationMsg}</label>
+<br>
+<div class="pw-res-data-tabs-${callId} pw-data-tabs">
+${await createResponseTab(responseBody, "BODY", callId, true)}
+${await createResponseTab(responseHeaders, "HEADERS", callId)}
+</div>
+</div>`;
 };
 
 /**
  * Creates HTML for a response tab
  */
+// const createResponseTab = async (
+// data: any,
+// tabLabel: string,
+// callId: number,
+// checked?: boolean
+// ): Promise<string> => {
+// if (data === undefined) return ''
+
+// const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, '-')
+// return `<input type="radio" name="pw-res-data-tabs-${callId}" id="pw-res-${tabLabelForId}-${callId}" ${
+// checked ? 'checked="checked"' : ''
+// }>
+// <label for="pw-res-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
+// <div class="pw-tab-content">
+// <pre class="hljs" id="res-${tabLabelForId}-${callId}" data-tab-type="res-${tabLabelForId}">${data}</pre>
+// </div>`
+// }
+
 const createResponseTab = async (
   data: any,
   tabLabel: string,
@@ -269,18 +329,63 @@ const createResponseTab = async (
   if (data === undefined) return "";
 
   const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, "-");
-  return `<input type="radio" name="pw-res-data-tabs-${callId}" id="pw-res-${tabLabelForId}-${callId}" ${
-    checked ? 'checked="checked"' : ""
-  }>
-        <label for="pw-res-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
-        <div class="pw-tab-content">
-            <pre class="hljs" id="res-${tabLabelForId}-${callId}" data-tab-type="res-${tabLabelForId}">${data}</pre>
-        </div>`;
+  const contentId = `res-${tabLabelForId}-${callId}`;
+
+  return `
+<input
+type="radio"
+name="pw-res-data-tabs-${callId}"
+id="pw-res-${tabLabelForId}-${callId}"
+${checked ? 'checked="checked"' : ""}
+>
+
+<label
+for="pw-res-${tabLabelForId}-${callId}"
+class="property pw-tab-label">
+${tabLabel.toUpperCase()}
+</label>
+
+<div class="pw-tab-content">
+
+<div class="pw-copy-container">
+<button
+class="pw-copy-btn"
+onclick="copyToClipboard('${contentId}', this)">
+📋 Copy Content
+</button>
+</div>
+
+<pre
+class="hljs"
+id="${contentId}">
+${data}
+</pre>
+
+</div>
+`;
 };
 
 /**
  * Creates HTML for a validation tab
  */
+// const createValidationTab = async (
+// data: any,
+// tabLabel: string,
+// callId: number,
+// checked?: boolean
+// ): Promise<string> => {
+// if (data === undefined) return ''
+
+// const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, '-')
+// return `<input type="radio" name="pw-val-data-tabs-${callId}" id="pw-val-${tabLabelForId}-${callId}" ${
+// checked ? 'checked="checked"' : ''
+// }>
+// <label for="pw-val-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
+// <div class="pw-tab-content">
+// <pre class="hljs" id="val-${tabLabelForId}-${callId}" data-tab-type="val-${tabLabelForId}">${data}</pre>
+// </div>`
+// }
+
 const createValidationTab = async (
   data: any,
   tabLabel: string,
@@ -290,49 +395,154 @@ const createValidationTab = async (
   if (data === undefined) return "";
 
   const tabLabelForId = tabLabel.toLowerCase().replace(/[^a-z0-9]/g, "-");
-  return `<input type="radio" name="pw-val-data-tabs-${callId}" id="pw-val-${tabLabelForId}-${callId}" ${
-    checked ? 'checked="checked"' : ""
-  }>
-        <label for="pw-val-${tabLabelForId}-${callId}" class="property pw-tab-label">${tabLabel.toUpperCase()}</label>
-        <div class="pw-tab-content">
-            <pre class="hljs" id="val-${tabLabelForId}-${callId}" data-tab-type="val-${tabLabelForId}">${data}</pre>
-        </div>`;
+  const contentId = `val-${tabLabelForId}-${callId}`;
+
+  return `
+<input
+type="radio"
+name="pw-val-data-tabs-${callId}"
+id="pw-val-${tabLabelForId}-${callId}"
+${checked ? 'checked="checked"' : ""}
+>
+
+<label
+for="pw-val-${tabLabelForId}-${callId}"
+class="property pw-tab-label">
+${tabLabel.toUpperCase()}
+</label>
+
+<div class="pw-tab-content">
+
+<div class="pw-copy-container">
+<button
+class="pw-copy-btn"
+onclick="copyToClipboard('${contentId}', this)">
+📋 Copy Content
+</button>
+</div>
+
+<pre
+class="hljs"
+id="${contentId}"
+data-tab-type="val-${tabLabelForId}">${data}</pre>
+
+</div>`;
 };
+
+const copyScript = `
+<script>
+async function copyToClipboard(elementId, button) {
+try {
+const element = document.getElementById(elementId);
+
+if (!element) {
+throw new Error('Element not found');
+}
+
+const text = element.innerText
+
+if(navigator.clipboard){
+await navigator.clipboard.writeText(text);
+} else {
+const textarea = document.createElement('textarea')
+textarea.value = text
+document.body.appendChild(textarea)
+textarea.select()
+document.execCommand('copy')
+document.body.removeChild(textarea)
+}
+
+button.classList.add('copied');
+button.textContent = '✅ Copied';
+button.textContent = '✅ ' + text.length + ' characters copied'
+setTimeout(() => {
+button.classList.remove('copied');
+button.textContent = '📋 Copy Content';
+}, 2000);
+
+} catch (error) {
+console.error('Copy failed:', error);
+
+button.textContent = '❌ Failed';
+
+setTimeout(() => {
+button.textContent = '📋 Copy Content';
+}, 2000);
+}
+}
+</script>
+`;
 
 /**
  * Creates a complete HTML page for API call display
  */
+// const createPageHtml = async (apiCallHtml: string): Promise<string> => {
+// return `<!DOCTYPE html>
+// <html lang="en">
+// <head>
+// <meta charset="UTF-8">
+// <meta name="viewport" content="width=device-width, initial-scale=1.0">
+// <title>API Call Details</title>
+// ${inlineStyles}
+// </head>
+// <body>
+// <div class="pw-api-container">${apiCallHtml}</div>
+// </body>
+// </html>`
+// }
+
 const createPageHtml = async (apiCallHtml: string): Promise<string> => {
   return `<!DOCTYPE html>
-    <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>API Call Details</title>
-            ${inlineStyles}
-        </head>
-        <body>
-            <div class="pw-api-container">${apiCallHtml}</div>
-        </body>
-    </html>`;
-};
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Call Details</title>
+${inlineStyles}
+</head>
+<body>
+<div class="pw-api-container">
+${apiCallHtml}
+</div>
 
+${copyScript}
+</body>
+</html>`;
+};
 /**
  * Creates HTML for API call report attachment
  */
+// const createApiCallReportAttachment = async (
+// apiCallHtml: string
+// ): Promise<string> => {
+// return `<html>
+// <head>
+// <meta charset="UTF-8">
+// <title>API Call Report</title>
+// ${inlineStyles}
+// </head>
+// <body>
+// ${apiCallHtml}
+// </body>
+// </html>`
+// }
+
 const createApiCallReportAttachment = async (
   apiCallHtml: string,
 ): Promise<string> => {
-  return `<html>
-        <head>
-            <meta charset="UTF-8"> 
-            <title>API Call Report</title>
-            ${inlineStyles}
-        </head>
-        <body>
-            ${apiCallHtml}
-        </body>
-    </html>`;
+  return `
+<html>
+<head>
+<meta charset="UTF-8">
+<title>API Call Report</title>
+${inlineStyles}
+</head>
+<body>
+${apiCallHtml}
+
+${copyScript}
+</body>
+</html>`;
 };
 
 /**
@@ -373,129 +583,136 @@ const formatJson = (jsonObject: object): string => {
  * Inline CSS styles for the API display
  */
 const inlineStyles = `<style>
-    html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    .pw-card {
-        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.1);
-        transition: 0.3s;
-        border-radius: 0;
-        overflow: hidden;
-        height: 100%;
-        box-sizing: border-box;
-    }
-    .pw-card:hover { box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2); }
-    .pw-api-container {
-        color: rgb(40, 40, 40);
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        box-sizing: border-box;
-    }
-    .pw-api-call {
-        background-color: rgb(248, 250, 252);
-        border: none;
-        margin: 0;
-        padding: 20px;
-        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        min-height: 100%;
-        box-sizing: border-box;
-        overflow-y: auto;
-    }
-    .pw-api-request, .pw-api-response { margin-bottom: 20px; }
-    .title { 
-        font-weight: 800; 
-        font-size: 1.4em; 
-        color: rgb(30, 64, 175);
-        margin-right: 10px;
-    }
-    .title-property { 
-        color: rgb(75, 85, 99); 
-        font-weight: 600; 
-        font-size: 1.1em; 
-    }
-    .property { 
-        display: inline-block;
-        padding: 8px 12px; 
-        margin: 10px 5px 0 0; 
-        cursor: pointer;
-        color: rgb(55, 65, 81); 
-        font-weight: 600; 
-        font-size: 0.9em; 
-        border-radius: 6px 6px 0 0;
-        background-color: rgb(229, 231, 235);
-        border: 1px solid rgb(209, 213, 219);
-    }
-    .pw-api-hljs { 
-        background: white;
-        border: 1px solid rgb(229, 231, 235);
-        border-radius: 6px;
-        padding: 12px;
-        margin: 8px 0;
-        font-size: 0.9em;
-        overflow-x: auto;
-    }
-    
-    /* Status color coding */
-    .pw-api-1xx { color: rgb(59, 130, 246)!important; }
-    .pw-api-2xx { color: rgb(34, 197, 94)!important; }
-    .pw-api-3xx { color: rgb(249, 115, 22)!important; }
-    .pw-api-4xx { color: rgb(239, 68, 68)!important; }
-    .pw-api-5xx { color: rgb(220, 38, 127)!important; }
-    
-    /* Tab styling */
-    .pw-data-tabs { display: flex; flex-wrap: wrap; margin-top: 10px; }
-    .pw-data-tabs [type="radio"] { display: none; }
-    .pw-tab-label { 
-        background-color: rgb(243, 244, 246);
-        border: 1px solid rgb(209, 213, 219);
-        border-bottom: none;
-    }
-    .pw-tab-label:hover { 
-        background-color: rgb(229, 231, 235);
-        color: rgb(30, 64, 175); 
-    }
-    .pw-tab-content { 
-        width: 100%; 
-        order: 1; 
-        display: none;
-        border: 1px solid rgb(209, 213, 219);
-        border-top: none;
-        border-radius: 0 0 6px 6px;
-    }
-    .pw-data-tabs [type="radio"]:checked + label + .pw-tab-content { display: block; }
-    .pw-data-tabs [type="radio"]:checked + label { 
-        background: white; 
-        border-bottom: 1px solid white;
-        color: rgb(30, 64, 175);
-        font-weight: 700;
-    }
-    
-    .hljs { 
-        background: white;
-        padding: 16px; 
-        margin: 0;
-        overflow-x: auto;
-        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        font-size: 0.85em;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-    }
-    
-    /* Simple JSON highlighting */
-    .json-key { color: rgb(147, 51, 234); font-weight: 600; }
-    .json-string { color: rgb(34, 197, 94); }
-    .json-number { color: rgb(249, 115, 22); }
-    .json-literal { color: rgb(239, 68, 68); font-weight: 600; }
-    
-    hr { 
-        border: none; 
-        height: 1px; 
-        background: rgb(229, 231, 235);
-        margin: 20px 0;
-    }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; }
+.pw-card {
+box-shadow: 0 4px 8px 0 rgba(0,0,0,0.1);
+transition: 0.3s;
+border-radius: 8px;
+overflow: hidden;
+}
+.pw-card:hover { box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2); }
+.pw-api-container { color: rgb(40, 40, 40); max-width: 1200px; margin: 0 auto; }
+.pw-api-call {
+background-color: rgb(248, 250, 252);
+border: 1px solid rgb(226, 232, 240);
+margin: 20px 0;
+padding: 20px;
+font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+.pw-api-request, .pw-api-response { margin-bottom: 20px; }
+.title {
+font-weight: 800;
+font-size: 1.4em;
+color: rgb(30, 64, 175);
+margin-right: 10px;
+}
+.title-property {
+color: rgb(75, 85, 99);
+font-weight: 600;
+font-size: 1.1em;
+}
+.property {
+display: inline-block;
+padding: 8px 12px;
+margin: 10px 5px 0 0;
+cursor: pointer;
+color: rgb(55, 65, 81);
+font-weight: 600;
+font-size: 0.9em;
+border-radius: 6px 6px 0 0;
+background-color: rgb(229, 231, 235);
+border: 1px solid rgb(209, 213, 219);
+}
+.pw-api-hljs {
+background: white;
+border: 1px solid rgb(229, 231, 235);
+border-radius: 6px;
+padding: 12px;
+margin: 8px 0;
+font-size: 0.9em;
+overflow-x: auto;
+}
+/* Status color coding */
+.pw-api-1xx { color: rgb(59, 130, 246)!important; }
+.pw-api-2xx { color: rgb(34, 197, 94)!important; }
+.pw-api-3xx { color: rgb(249, 115, 22)!important; }
+.pw-api-4xx { color: rgb(239, 68, 68)!important; }
+.pw-api-5xx { color: rgb(220, 38, 127)!important; }
+/* Tab styling */
+.pw-data-tabs { display: flex; flex-wrap: wrap; margin-top: 10px; }
+.pw-data-tabs [type="radio"] { display: none; }
+.pw-tab-label {
+background-color: rgb(243, 244, 246);
+border: 1px solid rgb(209, 213, 219);
+border-bottom: none;
+}
+.pw-tab-label:hover {
+background-color: rgb(229, 231, 235);
+color: rgb(30, 64, 175);
+}
+.pw-tab-content {
+width: 100%;
+order: 1;
+display: none;
+border: 1px solid rgb(209, 213, 219);
+border-top: none;
+border-radius: 0 0 6px 6px;
+}
+.pw-data-tabs [type="radio"]:checked + label + .pw-tab-content { display: block; }
+.pw-data-tabs [type="radio"]:checked + label {
+background: white;
+border-bottom: 1px solid white;
+color: rgb(30, 64, 175);
+font-weight: 700;
+}
+.hljs {
+background: white;
+padding: 16px;
+margin: 0;
+overflow-x: auto;
+font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+font-size: 0.85em;
+line-height: 1.5;
+white-space: pre-wrap;
+word-wrap: break-word;
+}
+/* Simple JSON highlighting */
+.json-key { color: rgb(147, 51, 234); font-weight: 600; }
+.json-string { color: rgb(34, 197, 94); }
+.json-number { color: rgb(249, 115, 22); }
+.json-literal { color: rgb(239, 68, 68); font-weight: 600; }
+hr {
+border: none;
+height: 1px;
+background: rgb(229, 231, 235);
+margin: 20px 0;
+}
+.pw-copy-container {
+display: flex;
+justify-content: flex-end;
+padding: 10px;
+background: #f8fafc;
+border-bottom: 1px solid #e5e7eb;
+position: sticky;
+top: 0;
+z-index: 1;
+}
+
+.pw-copy-btn {
+background-color: #2563eb;
+color: white;
+border: none;
+border-radius: 6px;
+padding: 6px 12px;
+cursor: pointer;
+font-size: 12px;
+font-weight: 600;
+margin:0;
+}
+.pw-copy-btn:hover {
+background-color: #1d4ed8;
+}
+.pw-copy-btn.copied {
+background-color: #16a34a;
+}
 </style>`;

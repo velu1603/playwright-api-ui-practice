@@ -16,26 +16,28 @@ import {
 import { getDynamicUpdatePayload } from "../../data/updated-Payload";
 import { updateFactory } from "../../data/update-factory";
 import { bookingFactory } from "../../data/booking-factory";
-import { getLogger } from '../../utils/logger'
+import { getLogger } from "../../utils/logger";
+import { faker } from "@faker-js/faker";
+import { addDays } from "@utils/addDays";
 
 test.describe("🧪 Restful-booker API testing for practice", () => {
   test("✅ Ping HealthCheck check to confirm API is up and running. ", async ({
     apiClient,
   }) => {
-     await getLogger().info("Starting test")
+    await getLogger().info("Starting test");
     const resp = await apiClient({
       method: "GET",
       path: "/ping",
       uiMode: true,
       testStep: true,
-      retryConfig:{
+      retryConfig: {
         maxRetries: 4,
         initialDelayMs: 500,
         maxDelayMs: 10000,
-        enableJitter: true
-    }
+        enableJitter: true,
+      },
     });
-     await getLogger().success(`Status is ${resp.status}`)
+    await getLogger().success(`Status is ${resp.status}`);
     expect(resp.status, `Response should be ${resp.status}`).toBe(201);
   });
   test("✅ GET all bookings", async ({ apiClient }) => {
@@ -69,12 +71,12 @@ test.describe("🧪 Restful-booker API testing for practice", () => {
       },
       uiMode: true,
       body: body,
-      retryConfig:{
+      retryConfig: {
         maxRetries: 3,
         initialDelayMs: 500,
         maxDelayMs: 10000,
-        enableJitter: true
-    }
+        enableJitter: true,
+      },
     }).validateSchema(createBookingSchema);
 
     expect(resp.status, `Response should be ${resp.status}`).toBe(200);
@@ -103,12 +105,12 @@ test.describe("🧪 Restful-booker API testing for practice", () => {
       },
       uiMode: true,
       body: booking,
-      retryConfig:{
-      maxRetries: 3,
-      initialDelayMs: 500,
-      maxDelayMs: 10000,
-      enableJitter: true
-    }
+      retryConfig: {
+        maxRetries: 3,
+        initialDelayMs: 500,
+        maxDelayMs: 10000,
+        enableJitter: true,
+      },
     }).validateSchema(createBookingSchema);
 
     expect(resp.status, `Response should be ${resp.status}`).toBe(200);
@@ -159,8 +161,14 @@ test.describe("🧪 Restful-booker API testing for practice", () => {
 
     const updateData = {
       bookingdates: {
-        checkin: "2026-07-01",
-        checkout: "2026-07-10",
+        checkin: addDays(
+          created.body.booking.bookingdates.checkin,
+          faker.number.int({ min: 3, max: 20 }),
+        ),
+        checkout: addDays(
+          created.body.booking.bookingdates.checkin,
+          faker.number.int({ min: 21, max: 30 }),
+        ),
       },
       totalprice: 400,
     };
@@ -173,8 +181,14 @@ test.describe("🧪 Restful-booker API testing for practice", () => {
       updated.body.bookingdates,
       `Updated booking dates match`,
     ).toMatchObject(updateData.bookingdates);
-    expect(updated.body.bookingdates.checkin,`Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`).toBeValidDateFormat()
-    expect(updated.body.bookingdates.checkout,`Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`).toBeValidDateFormat()
+    expect(
+      updated.body.bookingdates.checkin,
+      `Check in date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkin}`,
+    ).toBeValidDateFormat();
+    expect(
+      updated.body.bookingdates.checkout,
+      `Check out date format is YYYY-MM-DD and date is ${updated.body.bookingdates.checkout}`,
+    ).toBeValidDateFormat();
   });
 
   test("✅ Mixed dynamic update", async ({ apiClient }) => {
